@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Legendary Age — 3D</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #04050d; }
+    #view { position: fixed; inset: 0; }
+    #view canvas { display: block; }
+    #fx { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 40; font-family: 'Segoe UI', sans-serif; }
+    #fx div { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; font-weight: 700; font-size: 15px; text-shadow: 0 0 3px #050610, 0 0 3px #050610, 0 1px 2px #050610; }
+    #fx .bar { width: 34px; height: 5px; background: rgba(5,6,16,.85); border: 1px solid rgba(5,6,16,.85); }
+    #fx .bar i { display: block; height: 100%; background: #ff3f6c; }
+  </style>
+  <script type="importmap">
+    { "imports": { "three": "./node_modules/three/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <div id="view"></div>
+  <div id="fx"></div>
+  <script src="src/save.js"></script>
+  <script src="src/voxel-models.js"></script>
+  <script src="src/world.js"></script>
+  <script src="src/game-core.js"></script>
+  <script src="src/hud.js"></script>
+  <script type="module" src="src/game3d.js"></script>
+</body>
+</html>

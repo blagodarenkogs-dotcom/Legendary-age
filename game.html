@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Legendary Age</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #04050d; font-family: 'Segoe UI', Tahoma, sans-serif; color: #e9ecff; }
+    #c2d { position: fixed; inset: 0; display: block; }
+    #view3d { position: fixed; inset: 0; }
+    #view3d canvas { display: block; }
+    #fx { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 40; }
+    #fx div { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; font-weight: 700; font-size: 15px; text-shadow: 0 0 3px #050610, 0 0 3px #050610, 0 1px 2px #050610; }
+    #fx .bar { width: 38px; height: 5px; background: rgba(5,6,16,.85); border: 1px solid rgba(5,6,16,.85); }
+    #fx .bar i { display: block; height: 100%; background: #ff3f6c; }
+    #fx .nm { font-size: 13px; }
+    #fx .bub { font-weight: 400; font-size: 13px; background: rgba(9,11,28,.88); border: 1px solid rgba(43,231,255,.5); border-radius: 8px; padding: 3px 8px; max-width: 220px; white-space: normal; text-align: center; }
+
+    #hud { position: fixed; inset: 0; pointer-events: none; z-index: 50; user-select: none; }
+    #hud .card { position: absolute; background: rgba(9,11,28,.78); border: 1px solid rgba(43,231,255,.35); border-radius: 10px; box-shadow: 0 0 18px rgba(43,231,255,.12); padding: 10px 12px; }
+    #hud .player { left: 14px; top: 14px; width: 250px; }
+    #hud .who { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; font-size: 14px; color: #9aa4d8; }
+    #hud .who b { font: 400 18px 'Palatino Linotype', Georgia, serif; color: #e9ecff; letter-spacing: .5px; }
+    #hud .bar { position: relative; height: 16px; border-radius: 5px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: 6px; }
+    #hud .bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; transition: width .12s linear; }
+    #hud .bar.hp i { background: linear-gradient(90deg, #ff3f6c, #ff7a5c); }
+    #hud .bar.xp { height: 10px; }
+    #hud .bar.xp i { background: linear-gradient(90deg, #2be7ff, #7a5cff); }
+    #hud .bar em { position: absolute; inset: 0; font-style: normal; font-size: 11px; line-height: 16px; text-align: center; text-shadow: 0 1px 2px #000; }
+    #hud .top { right: 14px; top: 14px; min-width: 200px; text-align: right; }
+    #hud .zone { font: 400 18px 'Palatino Linotype', Georgia, serif; margin-bottom: 6px; }
+    #hud .gold { display: flex; justify-content: flex-end; align-items: center; gap: 8px; font-size: 22px; font-weight: 700; color: #ffd166; }
+    #hud .coin { width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3b8, #ffcf5c 55%, #b8862a); box-shadow: 0 0 10px rgba(255,207,92,.7); }
+    #hud .net { margin-top: 4px; font-size: 12px; color: #8f99cf; }
+    #hud .skills { left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; gap: 12px; padding: 8px 10px; }
+    #hud .skill { position: relative; width: 116px; height: 56px; border-radius: 8px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); overflow: hidden; text-align: center; }
+    #hud .skill kbd { position: absolute; left: 6px; top: 4px; font: 700 13px 'Segoe UI', sans-serif; color: #2be7ff; }
+    #hud .skill span { position: absolute; left: 0; right: 0; bottom: 6px; font-size: 12px; }
+    #hud .skill .cd { position: absolute; left: 0; right: 0; top: 0; height: 0; background: rgba(5,6,16,.72); }
+    #hud .skill .cdt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; }
+    #hud .chat { left: 14px; bottom: 14px; width: 330px; padding: 8px 10px; pointer-events: none; }
+    #hud .chat .log { max-height: 150px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; font-size: 13px; line-height: 1.4; }
+    #hud .chat .log div { overflow-wrap: anywhere; }
+    #hud .chat .log .sys { color: #98a2d6; }
+    #hud .chat .log b { color: #2be7ff; font-weight: 600; }
+    #hud .chat input { pointer-events: auto; width: 100%; margin-top: 6px; padding: 6px 8px; border-radius: 6px; border: 1px solid rgba(43,231,255,.4); background: rgba(5,6,16,.85); color: #e9ecff; font: 13px 'Segoe UI', sans-serif; display: none; box-sizing: border-box; }
+    #hud .chat .hint { margin-top: 4px; font-size: 11px; color: #7f89bd; }
+    #hud .toast { position: absolute; left: 50%; top: 84px; transform: translateX(-50%); padding: 9px 18px; border-radius: 999px; background: rgba(9,11,28,.85); border: 1px solid rgba(255,63,208,.55); box-shadow: 0 0 16px rgba(255,63,208,.25); font-size: 15px; opacity: 0; transition: opacity .25s; }
+    #hud .toast.on { opacity: 1; }
+    #hud .dead, #hud .lost { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; font: 400 32px 'Palatino Linotype', Georgia, serif; }
+    #hud .dead { background: rgba(30,0,10,.55); }
+    #hud .lost { background: rgba(5,6,16,.85); flex-direction: column; gap: 14px; pointer-events: auto; }
+    #hud .lost small { font: 15px 'Segoe UI', sans-serif; color: #98a2d6; }
+    #hud .lost button, #hud .board button { padding: 9px 20px; border-radius: 8px; border: 1px solid #2be7ff; background: transparent; color: #2be7ff; font: 600 14px 'Segoe UI', sans-serif; cursor: pointer; }
+    #hud .lost button:hover, #hud .board button:hover { background: rgba(43,231,255,.14); }
+    #hud .board { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, 90vw); display: none; pointer-events: auto; padding: 18px 20px; }
+    #hud .board h2 { margin: 0 0 12px; font: 700 24px 'Palatino Linotype', Georgia, serif; color: #ffd166; }
+    #hud .board .q { padding: 10px 0; border-top: 1px solid rgba(255,255,255,.1); }
+    #hud .board .q b { display: block; margin-bottom: 3px; }
+    #hud .board .q span { color: #a9b2e6; font-size: 14px; }
+    #hud .board .q em { display: block; margin-top: 4px; font-style: normal; color: #ffd166; font-size: 13px; }
+    #hud .board p { margin: 10px 0 0; font-size: 12px; color: #7f89bd; }
+  </style>
+  <script type="importmap">
+    { "imports": { "three": "./node_modules/three/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="c2d" hidden></canvas>
+  <div id="view3d"></div>
+  <div id="fx"></div>
+  <div id="hud">
+    <div class="card player">
+      <div class="who"><b id="h-name">…</b><span id="h-class"></span></div>
+      <div class="bar hp"><i id="h-hp"></i><em id="h-hp-t"></em></div>
+      <div class="bar xp"><i id="h-xp"></i></div>
+    </div>
+    <div class="card top">
+      <div class="zone" id="h-zone">Подключение…</div>
+      <div class="gold"><span class="coin"></span><span id="h-gold">0</span></div>
+      <div class="net" id="h-net"></div>
+    </div>
+    <div class="card skills">
+      <div class="skill" id="h-sk1"><kbd>1</kbd><span id="h-sk1n"></span><div class="cd"></div><div class="cdt"></div></div>
+      <div class="skill" id="h-sk2"><kbd>2</kbd><span id="h-sk2n"></span><div class="cd"></div><div class="cdt"></div></div>
+    </div>
+    <div class="card chat">
+      <div class="log" id="h-log"></div>
+      <input id="h-chat-in" type="text" maxlength="120" placeholder="Сообщение… (Enter — отправить, Esc — отмена)" autocomplete="off">
+      <div class="hint">Enter — чат · WASD — движение · 1 — удар · 2 — рывок · Esc — в лаунчер</div>
+    </div>
+    <div class="toast" id="h-toast"></div>
+    <div class="dead" id="h-dead"><div>Вы погибли<br><small style="font:16px 'Segoe UI',sans-serif">Возрождение в городе через <span id="h-rs">3</span> с</small></div></div>
+    <div class="lost" id="h-lost"><div id="h-lost-t">Соединение потеряно</div><small id="h-lost-s">Сервер закрыл соединение.</small><button id="h-lost-b" type="button">Вернуться в лаунчер</button></div>
+    <div class="card board" id="h-board">
+      <h2>Доска объявлений</h2>
+      <div class="q"><b>Слизни на тропе</b><span>Победите 5 слизней в Лесном Туннеле.</span><em>Награда: 40 золота</em></div>
+      <div class="q"><b>Клыки и дубины</b><span>Одолейте 3 орков — они бродят и в лесу, и глубже.</span><em>Награда: 90 золота</em></div>
+      <div class="q"><b>Тишина в подземелье</b><span>Разгоните скелетов в Мрачном Подземелье.</span><em>Награда: 150 золота</em></div>
+      <p>Приём заданий появится позже — пока это только список.</p>
+      <button id="h-board-x" type="button">Закрыть</button>
+    </div>
+  </div>
+
+  <script src="voxel-models.js"></script>
+  <script src="voxel-db.js"></script>
+  <script src="voxel2d.js"></script>
+  <script src="world.js"></script>
+  <script type="module">
+    'use strict';
+    /* ============================================================
+       Legendary Age — игровой клиент.
+       Один файл, два графических движка: Canvas 2D (пиксельно-воксельный, вид сверху)
+       и Three.js (3D от третьего лица). Всё рисуется кодом, готовых текстур нет.
+       Клиент только рисует и отправляет нажатые клавиши; мир считает сервер (server.js).
+       ============================================================ */
+    const DB = window.VoxelDB, VM = window.VoxelModels, VS = window.VoxelSprites, World = window.World;
+    const T = World.T, W = World.W, H = World.H;
+    const $ = id => document.getElementById(id);
+    const mode = new URLSearchParams(location.search).get('mode') === '3d' ? '3d' : '2d';
+    const LS = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+    const serverUrl = LS('la_server'), token = LS('la_token');
+    let myChar = null;
+    try { myChar = JSON.parse(LS('la_char')); } catch (e) { /* ignore */ }
+    if (!serverUrl || !token || !myChar) { location.replace('index.html'); throw new Error('Нет данных входа, возвращаемся в лаунчер'); }
+
+    // ---------- состояние (обновляется снимками от сервера) ----------
+    const S = { id: null, zone: null, you: null, online: 0, ents: new Map(), fx: [], time: 0, ping: 0, leaving: false };
+    let engine = null, ws = null;
+    const me = () => S.ents.get('p' + S.id);
+    const dirOf = (fx, fy) => Math.abs(fx) > Math.abs(fy) ? (fx < 0 ? 1 : 3) : (fy < 0 ? 2 : 0);
+
+    // ---------- HUD ----------
+    let toastT = null, hudReady = false, lastHud = {};
+    const setText = (id, v) => { if (lastHud[id] !== v) { lastHud[id] = v; $(id).textContent = v; } };
+    function toast(t) { const el = $('h-toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2400); }
+    function chatLine(html, cls) {
+      const log = $('h-log'), d = document.createElement('div');
+      if (cls) d.className = cls;
+      if (html.name) { const b = document.createElement('b'); b.textContent = html.name + ': '; d.append(b, document.createTextNode(html.text)); } else d.textContent = html.text;
+      log.appendChild(d);
+      while (log.children.length > 40) log.removeChild(log.firstChild);
+    }
+    function updateHud() {
+      const y = S.you, e = me();
+      if (!y || !e) return;
+      if (!hudReady) {
+        hudReady = true;
+        const c = DB.CLASSES[e.cls];
+        setText('h-name', e.name); setText('h-class', c.icon + ' ' + c.name[e.gender] + ' · ' + (mode === '3d' ? '3D' : '2D'));
+        setText('h-sk1n', c.s1.name); setText('h-sk2n', c.s2.name);
+      }
+      setText('h-zone', World.ZONES[S.zone].name);
+      setText('h-gold', String(y.gold));
+      setText('h-hp-t', y.hp + ' / ' + y.mh + '   ·   Ур. ' + y.lv);
+      $('h-hp').style.width = Math.max(0, y.hp / y.mh * 100) + '%';
+      $('h-xp').style.width = Math.min(100, y.xp / y.nx * 100) + '%';
+      const c = DB.CLASSES[e.cls];
+      [['h-sk1', y.c1, c.s1.cd], ['h-sk2', y.c2, c.s2.cd]].forEach(a => {
+        const el = $(a[0]); el.querySelector('.cd').style.height = (a[1] > 0 ? a[1] / a[2] * 100 : 0) + '%';
+        el.querySelector('.cdt').textContent = a[1] > 0 ? a[1].toFixed(1) : '';
+      });
+      $('h-dead').style.display = y.dd ? 'flex' : 'none';
+      if (y.dd) setText('h-rs', String(Math.max(0, Math.ceil(y.rs))));
+      setText('h-net', 'Игроков онлайн: ' + S.online + ' · пинг ' + S.ping + ' мс');
+    }
+    const openBoard = () => { $('h-board').style.display = 'block'; };
+    const closeBoard = () => { $('h-board').style.display = 'none'; };
+    const boardOpen = () => $('h-board').style.display === 'block';
+    $('h-board-x').addEventListener('click', closeBoard);
+
+    function exitToLauncher() { S.leaving = true; try { ws.close(); } catch (e) { /* ignore */ } location.href = 'index.html'; }
+    function lost(title, sub) { $('h-lost-t').textContent = title; $('h-lost-s').textContent = sub || ''; $('h-lost').style.display = 'flex'; }
+    $('h-lost-b').addEventListener('click', exitToLauncher);
+
+    // ---------- сеть ----------
+    const send = o => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
+    function connect() {
+      try { ws = new WebSocket(serverUrl); } catch (e) { lost('Неверный адрес сервера', serverUrl); return; }
+      ws.onopen = () => send({ t: 'join', token });
+      ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } onMessage(m); };
+      ws.onerror = () => { if (!S.id) lost('Не удалось подключиться', 'Проверьте, что сервер запущен: ' + serverUrl); };
+      ws.onclose = () => { if (!S.leaving) lost('Соединение потеряно', 'Сервер закрыл соединение.'); };
+    }
+    function onMessage(m) {
+      switch (m.t) {
+        case 'welcome': S.id = m.id; break;
+        case 's': applySnapshot(m); break;
+        case 'chat': {
+          chatLine({ name: m.from, text: m.text });
+          const e = S.ents.get('p' + m.id); if (e) e.bubble = { text: m.text, t: S.time + 5 };
+          break;
+        }
+        case 'sys': chatLine({ text: m.s }, 'sys'); break;
+        case 'pong': S.ping = Math.max(0, Math.round(performance.now() - m.ts)); break;
+        case 'error': S.leaving = true; lost('Сервер отклонил вход', m.error); break;
+        default: break;
+      }
+    }
+    setInterval(() => send({ t: 'ping', ts: performance.now() }), 3000);
+
+    function applySnapshot(m) {
+      if (S.zone !== m.z) {
+        S.zone = m.z; S.ents.clear(); S.fx.length = 0;
+        if (engine) engine.onZone();
+        toast(World.ZONES[m.z].name);
+      }
+      S.you = m.you; S.online = m.o;
+      const seen = new Set();
+      const upsert = (key, kind, id, x, y, extra) => {
+        seen.add(key);
+        let e = S.ents.get(key);
+        if (!e) { e = { key, kind, id, x, y, walk: 0, gt: 0, bubble: null }; S.ents.set(key, e); }
+        e.tx = x; e.ty = y;
+        Object.assign(e, extra);
+      };
+      for (const p of m.p) upsert('p' + p.id, 'p', p.id, p.x, p.y, { name: p.n, cls: p.c, gender: p.g, hc: p.hc, hl: p.hl, fx: p.fx, fy: p.fy, hp: p.hp, mh: p.mh, lv: p.lv, mv: p.mv, at: p.at, ds: p.ds, dd: p.dd });
+      for (const o of m.m) upsert('m' + o.id, 'm', o.id, o.x, o.y, { k: o.k, fx: o.fx, fy: o.fy, hp: o.hp, mh: o.mh, mv: o.mv, at: o.at, dd: o.dd });
+      for (const k of Array.from(S.ents.keys())) if (!seen.has(k)) S.ents.delete(k);
+      for (const e of m.e) {
+        if (e.k === 'fx') S.fx.push({ t: e.t, x: e.x, y: e.y, fx: e.fx, fy: e.fy, range: e.range, color: e.c, life: 0.22, max: 0.22 });
+        else if (e.k === 'txt') S.fx.push({ t: 'text', gx: e.x, gy: e.y, lift: e.l, rise: 0, text: e.s, color: e.c, life: 0.9, max: 0.9 });
+      }
+    }
+    // плавное движение к позиции с сервера + таймеры анимации
+    function updateEntities(dt) {
+      const k = 1 - Math.exp(-dt * 16);
+      for (const e of S.ents.values()) {
+        const dx = e.tx - e.x, dy = e.ty - e.y;
+        if (Math.abs(dx) + Math.abs(dy) > 220) { e.x = e.tx; e.y = e.ty; } else { e.x += dx * k; e.y += dy * k; }
+        if (e.mv) e.walk += dt;
+        if (e.bubble && e.bubble.t < S.time) e.bubble = null;
+      }
+      for (let i = S.fx.length - 1; i >= 0; i--) {
+        const f = S.fx[i]; f.life -= dt;
+        if (f.life <= 0) S.fx.splice(i, 1); else if (f.t === 'text') f.rise += 28 * dt;
+      }
+    }
+
+    // ---------- ввод ----------
+    const keys = new Set();
+    const held = (...c) => c.some(k => keys.has(k));
+    const chatIn = $('h-chat-in');
+    let lastSent = null, lastSentT = 0;
+    function pumpInput(now) {
+      let ix = (held('KeyD', 'ArrowRight') ? 1 : 0) - (held('KeyA', 'ArrowLeft') ? 1 : 0);
+      let iy = (held('KeyS', 'ArrowDown') ? 1 : 0) - (held('KeyW', 'ArrowUp') ? 1 : 0);
+      if (chatIn === document.activeElement) { ix = 0; iy = 0; }
+      const yaw = engine && engine.yaw ? engine.yaw() : 0;
+      const mx = Math.round((Math.cos(yaw) * ix + Math.sin(yaw) * iy) * 100) / 100;
+      const my = Math.round((-Math.sin(yaw) * ix + Math.cos(yaw) * iy) * 100) / 100;
+      const s1 = !!held('Digit1', 'Numpad1') && chatIn !== document.activeElement, s2 = !!held('Digit2', 'Numpad2') && chatIn !== document.activeElement;
+      const cur = { mx, my, s1, s2 };
+      const changed = !lastSent || cur.mx !== lastSent.mx || cur.my !== lastSent.my || cur.s1 !== lastSent.s1 || cur.s2 !== lastSent.s2;
+      if ((changed && now - lastSentT >= 50) || now - lastSentT > 400) { send({ t: 'input', mx, my, s1, s2 }); lastSent = cur; lastSentT = now; }
+    }
+    window.addEventListener('keydown', e => {
+      if (e.code === 'Escape') {
+        if (chatIn === document.activeElement) { chatIn.value = ''; chatIn.blur(); chatIn.style.display = 'none'; }
+        else if (boardOpen()) closeBoard(); else exitToLauncher();
+        return;
+      }
+      if (chatIn === document.activeElement) {
+        if (e.code === 'Enter' || e.code === 'NumpadEnter') {
+          const v = chatIn.value.trim(); if (v) send({ t: 'chat', text: v });
+          chatIn.value = ''; chatIn.blur(); chatIn.style.display = 'none';
+        }
+        return;
+      }
+      if (e.code === 'Enter' || e.code === 'NumpadEnter') { chatIn.style.display = 'block'; chatIn.focus(); e.preventDefault(); keys.clear(); return; }
+      keys.add(e.code);
+      if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
+    });
+    window.addEventListener('keyup', e => keys.delete(e.code));
+    window.addEventListener('blur', () => keys.clear());
+    window.addEventListener('beforeunload', () => { S.leaving = true; });
+
+    // общая проверка "клик по доске объявлений"
+    function boardProp() { return S.zone === 'town' ? World.propsFor('town').find(p => p.id === 'board') : null; }
+    function clickBoard() {
+      const b = boardProp(), e = me();
+      if (b && e && Math.hypot(e.x - b.x, e.y - b.y) < 170) openBoard(); else toast('Подойдите ближе к доске объявлений');
+    }
+
+    // ============================================================
+    //  ДВИЖОК 2D: вид сверху, пиксельно-воксельные спрайты на Canvas (стиль Undertale)
+    // ============================================================
+    function Engine2D() {
+      const S3 = 3;
+      const canvas = $('c2d'), ctx = canvas.getContext('2d');
+      canvas.hidden = false; $('view3d').style.display = 'none';
+      let sc = 1, ox = 0, oy = 0, dpr = 1;
+      function resize() {
+        dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(innerWidth * dpr); canvas.height = Math.floor(innerHeight * dpr);
+        canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px';
+        sc = Math.min(canvas.width / W, canvas.height / H);
+        ox = (canvas.width - W * sc) / 2; oy = (canvas.height - H * sc) / 2;
+      }
+      window.addEventListener('resize', resize); resize();
+
+      const grounds = {};
+      function ground(id) {
+        if (!grounds[id]) { const c = document.createElement('canvas'); c.width = W; c.height = H; World.drawGround(c.getContext('2d'), id); grounds[id] = c; }
+        return grounds[id];
+      }
+      const glows = {};
+      function glowSprite(hex, a0) {
+        const key = hex + a0;
+        if (glows[key]) return glows[key];
+        const R = 64, c = document.createElement('canvas'); c.width = c.height = R * 2;
+        const x = c.getContext('2d'), rgb = VM.hexToRgb(hex), gr = x.createRadialGradient(R, R, 0, R, R, R);
+        gr.addColorStop(0, 'rgba(' + rgb.join(',') + ',' + a0 + ')'); gr.addColorStop(1, 'rgba(' + rgb.join(',') + ',0)');
+        x.fillStyle = gr; x.fillRect(0, 0, R * 2, R * 2);
+        return (glows[key] = c);
+      }
+      const light = document.createElement('canvas'); light.width = W; light.height = H;
+      const lctx = light.getContext('2d');
+      let lightZone = null, propLights = [];
+      function buildPropLights() {
+        propLights = [];
+        for (const p of World.propsFor(S.zone)) {
+          const gl = VM.MODELS[p.model].glow;
+          if (gl) propLights.push({ x: p.x + gl.x * S3, y: p.y + gl.y * S3 * VS.TOP - gl.z * S3, r: gl.r, c: gl.c, seed: p.x });
+        }
+        lightZone = S.zone;
+      }
+
+      const toWorld = e => ({ x: (e.clientX * dpr - ox) / sc, y: (e.clientY * dpr - oy) / sc });
+      function overBoard(w) { const b = boardProp(); return !!b && Math.abs(w.x - b.x) < 34 && w.y > b.y - 60 && w.y < b.y + 8; }
+      canvas.addEventListener('mousemove', e => { canvas.style.cursor = overBoard(toWorld(e)) ? 'pointer' : 'default'; });
+      canvas.addEventListener('click', e => { if (overBoard(toWorld(e))) clickBoard(); });
+
+      const phase = u => u < 0.33 ? 0 : (u < 0.66 ? 1 : 2);
+      function wrap(text, max) {
+        const words = text.split(' '), lines = []; let cur = '';
+        for (const w of words) { if ((cur + ' ' + w).trim().length > max && cur) { lines.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); }
+        if (cur) lines.push(cur);
+        return lines.slice(0, 3);
+      }
+      function plate(e, top) {
+        ctx.font = 'bold 13px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
+        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(5,6,16,.9)'; ctx.fillStyle = e.id === S.id ? '#7df0ff' : '#e9ecff';
+        const label = 'Ур.' + e.lv + ' ' + e.name;
+        ctx.strokeText(label, e.x, top); ctx.fillText(label, e.x, top);
+        if (e.id !== S.id) { const w = 34, x = e.x - w / 2; ctx.fillStyle = 'rgba(5,6,16,.85)'; ctx.fillRect(x - 1, top + 3, w + 2, 6); ctx.fillStyle = '#ff3f6c'; ctx.fillRect(x, top + 4, w * Math.max(0, e.hp / e.mh), 4); }
+        if (e.bubble) {
+          ctx.font = '13px "Segoe UI", sans-serif';
+          const lines = wrap(e.bubble.text, 22), w = Math.max.apply(null, lines.map(l => ctx.measureText(l).width)) + 14, h = lines.length * 16 + 8;
+          const bx = e.x - w / 2, by = top - 14 - h;
+          ctx.fillStyle = 'rgba(9,11,28,.92)'; ctx.strokeStyle = 'rgba(43,231,255,.6)'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.rect(bx, by, w, h); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#e9ecff'; lines.forEach((l, i) => ctx.fillText(l, e.x, by + 16 + i * 16));
+        }
+      }
+      function drawPlayer(e) {
+        const id = DB.ensureModel({ cls: e.cls, gender: e.gender, hairColor: e.hc, hairLen: e.hl });
+        let frame = e.mv ? (Math.floor(e.walk * 9) & 3) : 0, pose = '';
+        if (e.at > 0) { pose = 'attack'; frame = phase(1 - e.at / 0.3); }
+        VS.draw(ctx, id, e.x, e.y, { dir: dirOf(e.fx, e.fy), frame, pose, s: S3, alpha: e.dd ? 0.35 : 1 });
+        plate(e, e.y - VS.heightPx(id, S3) - 8);
+      }
+      function drawMob(e) {
+        const o = { dir: dirOf(e.fx, e.fy), frame: e.mv ? (Math.floor(e.walk * 7) & 3) : 0, s: S3, alpha: e.dd ? 0.4 : 1 };
+        if (e.at > 0 && e.k !== 'slime' && e.k !== 'bat') { o.pose = 'attack'; o.frame = phase(1 - e.at / 0.3); }
+        if (e.k === 'slime') { const k = Math.sin(S.time * 6 + e.id); o.sx = 1 + 0.06 * k; o.sy = 1 - 0.08 * k; }
+        VS.draw(ctx, e.k, e.x, e.y, o);
+        if (!e.dd && e.hp < e.mh) {
+          const w = 34, x = e.x - w / 2, y = e.y - VS.heightPx(e.k, S3) - (e.k === 'bat' ? 4 : 12);
+          ctx.fillStyle = 'rgba(5,6,16,.85)'; ctx.fillRect(x - 1, y - 1, w + 2, 6);
+          ctx.fillStyle = '#ff3f6c'; ctx.fillRect(x, y, w * Math.max(0, e.hp / e.mh), 4);
+        }
+      }
+      function drawFx() {
+        for (const f of S.fx) {
+          const u = 1 - f.life / f.max;
+          ctx.save();
+          if (f.t === 'arc') {
+            const a = Math.atan2(f.fy, f.fx);
+            ctx.translate(f.x, f.y - 16);
+            ctx.globalAlpha = 1 - u; ctx.strokeStyle = f.color; ctx.shadowColor = f.color; ctx.shadowBlur = 14; ctx.lineWidth = 9 * (1 - u) + 2;
+            ctx.beginPath(); ctx.arc(0, 0, f.range * (0.55 + 0.25 * u), a - 1.0, a + 1.0); ctx.stroke();
+          } else if (f.t === 'beam') {
+            ctx.globalAlpha = 1 - u; ctx.strokeStyle = f.color; ctx.shadowColor = f.color; ctx.shadowBlur = 12; ctx.lineWidth = 5 * (1 - u) + 1;
+            ctx.beginPath(); ctx.moveTo(f.x, f.y - 20); ctx.lineTo(f.x + f.fx * f.range, f.y - 20 + f.fy * f.range); ctx.stroke();
+          } else if (f.t === 'ghost') {
+            VS.draw(ctx, f.model, f.x, f.y, { dir: f.dir, s: S3, shadow: false, alpha: (1 - u) * 0.4 });
+          } else if (f.t === 'text') {
+            ctx.font = 'bold 16px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
+            ctx.globalAlpha = Math.min(1, (1 - u) * 2.2);
+            ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(5,6,16,.9)'; ctx.fillStyle = f.color;
+            const y = f.gy - f.lift - f.rise;
+            ctx.strokeText(f.text, f.gx, y); ctx.fillText(f.text, f.gx, y);
+          }
+          ctx.restore();
+        }
+      }
+      function drawLighting() {
+        const z = World.ZONES[S.zone];
+        if (lightZone !== S.zone) buildPropLights();
+        const L = propLights.slice();
+        for (const e of S.ents.values()) {
+          if (e.dd) continue;
+          if (e.kind === 'p') {
+            L.push({ x: e.x, y: e.y - 22, r: z.dark > 0.4 ? 170 : 110, c: '#ffe9b0', seed: e.id, a: 0.12 });
+            const gl = VM.MODELS[DB.ensureModel({ cls: e.cls, gender: e.gender, hairColor: e.hc, hairLen: e.hl })].glow;
+            if (gl) L.push({ x: e.x + gl.x * S3 * 0.4, y: e.y - gl.z * S3, r: gl.r, c: gl.c, seed: e.id, a: 0.25 });
+          } else {
+            const gl = VM.MODELS[e.k].glow;
+            if (gl) L.push({ x: e.x, y: e.y - 8, r: gl.r, c: gl.c, seed: e.id, a: 0.2 });
+          }
+        }
+        lctx.globalCompositeOperation = 'source-over';
+        lctx.clearRect(0, 0, W, H);
+        lctx.fillStyle = 'rgba(4,6,22,' + z.dark + ')'; lctx.fillRect(0, 0, W, H);
+        lctx.globalCompositeOperation = 'destination-out';
+        const punch = glowSprite('#ffffff', 0.95);
+        for (const l of L) { const r = l.r * (0.94 + 0.06 * Math.sin(S.time * 8 + l.seed)); lctx.drawImage(punch, l.x - r, l.y - r, r * 2, r * 2); }
+        ctx.drawImage(light, 0, 0);
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        for (const l of L) {
+          const r = l.r * (0.94 + 0.06 * Math.sin(S.time * 8 + l.seed));
+          ctx.globalAlpha = l.a || 0.3; ctx.drawImage(glowSprite(l.c, 1), l.x - r, l.y - r, r * 2, r * 2);
+        }
+        ctx.restore();
+      }
+
+      function frame(dt) {
+        // шлейф рывка
+        for (const e of S.ents.values()) {
+          if (e.kind === 'p' && e.ds) {
+            e.gt -= dt;
+            if (e.gt <= 0) { e.gt = 0.035; S.fx.push({ t: 'ghost', model: DB.ensureModel({ cls: e.cls, gender: e.gender, hairColor: e.hc, hairLen: e.hl }), x: e.x, y: e.y, dir: dirOf(e.fx, e.fy), life: 0.25, max: 0.25 }); }
+          }
+        }
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.fillStyle = '#04050d'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (!S.zone) return;
+        ctx.setTransform(sc, 0, 0, sc, ox, oy);
+        ctx.imageSmoothingEnabled = false;
+        ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
+        ctx.drawImage(ground(S.zone), 0, 0);
+        const items = [];
+        for (const p of World.propsFor(S.zone)) items.push({ y: p.y, p });
+        for (const e of S.ents.values()) items.push({ y: e.y, e });
+        items.sort((a, b) => a.y - b.y);
+        for (const it of items) {
+          if (it.p) VS.draw(ctx, it.p.model, it.p.x, it.p.y, { s: S3 });
+          else if (it.e.kind === 'p') drawPlayer(it.e); else drawMob(it.e);
+        }
+        drawFx();
+        drawLighting();
+      }
+      return { frame, onZone() { lightZone = null; } };
+    }
+
+    // ============================================================
+    //  ДВИЖОК 3D (Three.js): стиль «аниме-мультфильм» (toon-освещение + чёрный контур)
+    //  Персонажи собираются из гладких фигур: сферы, капсулы, цилиндры, конусы, торы.
+    // ============================================================
+    async function Engine3D() {
+      const THREE = await import('three');
+      $('c2d').hidden = true;
+      let renderer;
+      try { renderer = new THREE.WebGLRenderer({ antialias: true }); }
+      catch (e) { lost('3D недоступно', 'Видеокарта или драйвер не поддерживает WebGL. Вернитесь в лаунчер и выберите 2D.'); throw e; }
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      $('view3d').appendChild(renderer.domElement);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+      const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+      const sun = new THREE.DirectionalLight(0xffffff, 0.9);
+      sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+      Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12, near: 1, far: 50 });
+      scene.add(ambient, sun, sun.target);
+      const pool = [];
+      for (let i = 0; i < 6; i++) { const l = new THREE.PointLight(0xffffff, 0, 6, 2); scene.add(l); pool.push(l); }
+      const selfLight = new THREE.PointLight(0xffe9b0, 3, 6, 2); scene.add(selfLight);
+      function resize() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+      window.addEventListener('resize', resize); resize();
+
+      // ---------- материалы: ступенчатый свет + контур ----------
+      const steps = new THREE.DataTexture(new Uint8Array([95, 170, 255]), 3, 1, THREE.RedFormat);
+      steps.minFilter = steps.magFilter = THREE.NearestFilter; steps.needsUpdate = true;
+      const mats = new Map();
+      function mat(hex, double) {
+        const k = hex + (double ? 'd' : '');
+        if (!mats.has(k)) mats.set(k, new THREE.MeshToonMaterial({ color: hex, gradientMap: steps, side: double ? THREE.DoubleSide : THREE.FrontSide }));
+        return mats.get(k);
+      }
+      const basics = new Map();
+      const basic = hex => { if (!basics.has(hex)) basics.set(hex, new THREE.MeshBasicMaterial({ color: hex })); return basics.get(hex); };
+      const hullMat = new THREE.MeshBasicMaterial({ color: 0x0b0a14, side: THREE.BackSide });
+      hullMat.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n transformed += normal * 0.011;'); };
+      // mk: меш + контур. o: pos, scale, rot, basic (светится), double, outline:false, shadow:false
+      function mk(geo, hex, o) {
+        o = o || {};
+        const m = new THREE.Mesh(geo, o.basic ? basic(hex) : mat(hex, o.double));
+        m.castShadow = o.shadow !== false && !o.basic;
+        if (o.outline !== false && !o.basic) m.add(new THREE.Mesh(geo, hullMat));
+        if (o.pos) m.position.set(o.pos[0], o.pos[1], o.pos[2]);
+        if (o.scale) m.scale.set(o.scale[0], o.scale[1], o.scale[2]);
+        if (o.rot) m.rotation.set(o.rot[0], o.rot[1], o.rot[2]);
+        return m;
+      }
+      const add = (parent, geo, hex, o) => { const m = mk(geo, hex, o); parent.add(m); return m; };
+      const pivot = (parent, x, y, z) => { const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g); return g; };
+      const G = THREE;
+      const sph = (r, a, b) => new G.SphereGeometry(r, a || 16, b || 12);
+      const cap = (r, l) => new G.CapsuleGeometry(r, l, 6, 12);
+      const cyl = (rt, rb, h, s) => new G.CylinderGeometry(rt, rb, h, s || 14);
+      const box = (w, h, d) => new G.BoxGeometry(w, h, d);
+      const cone = (r, h, s) => new G.ConeGeometry(r, h, s || 14);
+      const tor = (r, t, arc) => new G.TorusGeometry(r, t, 8, 24, arc || Math.PI * 2);
+
+      // ============ ПЕРСОНАЖ ============
+      function buildChar(look, opt) {
+        opt = opt || {};
+        const def = DB.CLASSES[look.cls], P = Object.assign({}, def.pal, opt.pal), K = Object.assign({}, def.kit, opt.kit);
+        const female = look.gender === 'female';
+        const skin = opt.skin || DB.SKIN, hairC = look.hairColor ? DB.HAIR_COLORS[look.hairColor].hex : null;
+        const bare = K.bare && !female;
+        const topC = bare ? skin : P.main, legC = P[K.legs || 'dark'], bootC = K.boots || P.dark;
+        const armC = K.bare ? skin : P.main, gloveC = K.glove || (K.bare ? skin : P.dark);
+        const root = new G.Group(), upper = new G.Group(); root.add(upper);
+        const rig = { root, upper, female, seed: Math.random() * 6.28, run: 0, ph: 0, bust: [], pec: [], hair: [], skirt: null, cape: null, scale: opt.scale || 1 };
+        if (opt.scale) root.scale.setScalar(opt.scale);
+
+        // ноги
+        const rl = female ? 0.072 : 0.082;
+        [-1, 1].forEach(sd => {
+          const g = pivot(root, sd * (female ? 0.095 : 0.105), 0.84, 0);
+          add(g, cap(rl, 0.56), legC, { pos: [0, -0.4, 0] });
+          add(g, cyl(rl + 0.012, rl + 0.02, 0.16, 12), bootC, { pos: [0, -0.68, 0] });
+          add(g, sph(rl + 0.02, 12, 8), bootC, { pos: [0, -0.75, 0.04], scale: [1, 0.7, 1.5] });
+          if (sd < 0) rig.legL = g; else rig.legR = g;
+        });
+        add(root, sph(0.13, 16, 10), legC, { pos: [0, 0.87, 0], scale: female ? [1.3, 0.8, 0.95] : [1.15, 0.75, 0.9] });
+
+        // торс: женская фигура (тонкая талия) или мужская (широкие плечи)
+        const torso = pivot(upper, 0, 0.88, 0); rig.torso = torso;
+        const prof = female ? [[0.135, 0], [0.125, 0.1], [0.098, 0.22], [0.118, 0.36], [0.132, 0.47], [0.105, 0.56], [0.055, 0.62]]
+          : [[0.15, 0], [0.145, 0.1], [0.14, 0.22], [0.175, 0.36], [0.2, 0.47], [0.17, 0.56], [0.06, 0.62]];
+        const pts = new G.SplineCurve(prof.map(p => new G.Vector2(p[0], p[1]))).getPoints(28);
+        add(torso, new G.LatheGeometry(pts, 24), topC, { scale: [1, 1, 0.72] });
+        add(torso, tor(female ? 0.105 : 0.145, 0.016), K.belt || P.trim, { pos: [0, 0.2, 0], rot: [Math.PI / 2, 0, 0], scale: [1, 0.72, 1] });
+        if (female) [-1, 1].forEach(sd => { rig.bust.push({ m: add(torso, sph(0.066, 16, 12), topC, { pos: [sd * 0.058, 0.44, 0.088], scale: [1, 1, 0.9] }), by: 0.44, bz: 0.088, side: sd }); });
+        else [-1, 1].forEach(sd => { rig.pec.push({ m: add(torso, sph(0.078, 16, 12), topC, { pos: [sd * 0.085, 0.47, 0.1], scale: [1, 0.72, 0.55] }), side: sd }); });
+        add(upper, cyl(0.04, 0.045, 0.08, 10), skin, { pos: [0, 1.53, 0] });
+
+        // руки
+        const sx = female ? 0.175 : 0.23, ra = female ? 0.04 : 0.052;
+        [-1, 1].forEach(sd => {
+          const g = pivot(upper, sd * sx, 1.42, 0);
+          add(g, sph(ra + 0.012, 10, 8), armC);
+          add(g, cap(ra, 0.34), armC, { pos: [0, -0.27, 0] });
+          add(g, sph(ra + 0.008, 10, 8), gloveC, { pos: [0, -0.53, 0] });
+          const hand = pivot(g, 0, -0.53, 0.02);
+          if (sd < 0) { rig.armL = g; rig.handL = hand; } else { rig.armR = g; rig.handR = hand; }
+        });
+
+        // голова
+        const head = pivot(upper, 0, 1.68, 0); rig.head = head;
+        add(head, sph(0.13, 24, 18), skin, { scale: [1, 1.05, 1] });
+        if (opt.skull) {
+          [-1, 1].forEach(sd => { add(head, sph(0.032, 10, 8), '#0a0a0a', { pos: [sd * 0.05, 0.005, 0.108], scale: [1, 1.2, 0.5], outline: false }); add(head, sph(0.014, 8, 6), '#ff3030', { pos: [sd * 0.05, 0.005, 0.122], basic: true }); });
+        } else {
+          const iris = DB.mix(opt.iris || P.accent, '#101020', 0.35);
+          [-1, 1].forEach(sd => {
+            add(head, sph(0.03, 12, 10), '#f8f8ff', { pos: [sd * 0.05, 0, 0.112], scale: [1, 1.25, 0.45], outline: false });
+            add(head, sph(0.02, 10, 8), iris, { pos: [sd * 0.05, -0.003, 0.121], scale: [1, 1.3, 0.4], outline: false });
+            add(head, sph(0.007, 6, 6), '#ffffff', { pos: [sd * 0.046, 0.01, 0.128], outline: false });
+            if (female) add(head, sph(0.022, 8, 6), '#ffb3b8', { pos: [sd * 0.078, -0.04, 0.1], scale: [1, 0.6, 0.4], outline: false });
+          });
+          add(head, sph(0.012, 6, 6), '#c9666e', { pos: [0, -0.055, 0.122], scale: [1.6, 0.5, 0.4], outline: false });
+        }
+        if (opt.tusks) [-1, 1].forEach(sd => add(head, cone(0.014, 0.06, 6), '#f4f0e0', { pos: [sd * 0.045, -0.075, 0.115], rot: [Math.PI, 0, 0] }));
+        if (hairC) {
+          add(head, new G.SphereGeometry(0.14, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.58), hairC, { pos: [0, 0.005, -0.004] });
+          add(head, new G.SphereGeometry(0.135, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.75), hairC, { pos: [0, -0.005, -0.03], scale: [1, 1, 0.85] });
+          [-0.08, -0.04, 0, 0.04, 0.08].forEach(x => add(head, sph(0.03, 8, 6), hairC, { pos: [x, 0.088 - Math.abs(x) * 0.25, 0.1], scale: [1.2, 1, 0.7] }));
+          if (look.hairLen === 'long') {
+            const g = pivot(head, 0, 0.05, -0.1);
+            add(g, cap(0.105, 0.42), hairC, { pos: [0, -0.27, -0.01], scale: [1, 1, 0.5] });
+            rig.hair.push({ g, off: 0, side: 0 });
+          } else if (look.hairLen === 'twin') {
+            [-1, 1].forEach(sd => {
+              const g = pivot(head, sd * 0.125, 0.07, -0.01);
+              add(g, cap(0.05, 0.36), hairC, { pos: [sd * 0.02, -0.24, -0.01] });
+              add(g, sph(0.036, 8, 6), P.trim);
+              rig.hair.push({ g, off: sd * 0.6, side: sd });
+            });
+          }
+        }
+        // головной убор
+        switch (K.head) {
+          case 'helm':
+            add(head, new G.SphereGeometry(0.15, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.56), P.main, { pos: [0, 0.01, 0] });
+            add(head, box(0.025, 0.1, 0.03), P.main, { pos: [0, -0.02, 0.13] });
+            add(head, cap(0.025, 0.22), '#d0213a', { pos: [0, 0.2, -0.05], rot: [0.5, 0, 0] });
+            break;
+          case 'horns':
+            add(head, tor(0.135, 0.015), P.accent, { pos: [0, 0.055, 0], rot: [Math.PI / 2, 0, 0] });
+            [-1, 1].forEach(sd => add(head, cone(0.03, 0.16, 8), '#eee8d0', { pos: [sd * 0.14, 0.13, 0], rot: [0, 0, -sd * 0.7] }));
+            break;
+          case 'halo':
+            add(head, new G.SphereGeometry(0.148, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.5), P.main, { pos: [0, 0.012, 0] });
+            [-1, 1].forEach(sd => add(head, cone(0.03, 0.14, 6), P.trim, { pos: [sd * 0.16, 0.06, -0.02], rot: [0, 0, -sd * 1.3] }));
+            add(head, tor(0.13, 0.012), '#fff3a0', { pos: [0, 0.29, -0.02], rot: [Math.PI / 2, 0, 0], basic: true });
+            break;
+          case 'witch':
+            add(head, cyl(0.26, 0.26, 0.015, 24), P.dark, { pos: [0, 0.1, 0] });
+            add(head, cone(0.16, 0.4, 20), P.dark, { pos: [0, 0.3, -0.01] });
+            add(head, tor(0.155, 0.012), P.trim, { pos: [0, 0.13, 0], rot: [Math.PI / 2, 0, 0] });
+            break;
+          case 'crown':
+            add(head, tor(0.14, 0.014), P.dark, { pos: [0, 0.08, 0], rot: [Math.PI / 2, 0, 0] });
+            [-1, 0, 1].forEach(s => add(head, cone(0.02, 0.1, 6), '#eee8d0', { pos: [s * 0.1, 0.16, s === 0 ? 0.1 : 0.03] }));
+            add(head, sph(0.02, 8, 6), P.accent, { pos: [0, 0.085, 0.14], basic: true });
+            break;
+          case 'veil':
+            add(head, tor(0.14, 0.012), P.trim, { pos: [0, 0.075, 0], rot: [Math.PI / 2, 0, 0] });
+            add(head, sph(0.018, 8, 6), P.accent, { pos: [0, 0.085, 0.14], basic: true });
+            add(head, cap(0.12, 0.35), P.main, { pos: [0, -0.2, -0.1], scale: [1, 1, 0.3] });
+            break;
+          case 'hood':
+            add(head, new G.SphereGeometry(0.16, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.62), P.dark, { pos: [0, 0, -0.015] });
+            add(head, cone(0.08, 0.2, 10), P.dark, { pos: [0, 0.05, -0.19], rot: [-1.2, 0, 0] });
+            break;
+          case 'mask':
+            add(head, new G.SphereGeometry(0.16, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.62), P.dark, { pos: [0, 0, -0.015] });
+            add(head, sph(0.125, 14, 10), P.dark, { pos: [0, -0.055, 0.03], scale: [1, 0.55, 0.9] });
+            break;
+          case 'band':
+            add(head, tor(0.138, 0.014), '#c0392b', { pos: [0, 0.06, 0], rot: [Math.PI / 2, 0, 0] });
+            add(head, cap(0.015, 0.16), '#c0392b', { pos: [0, 0.05, -0.16], rot: [0.6, 0, 0] });
+            break;
+          default: break;
+        }
+        // юбка / подол: качается влево-вправо
+        const skLen = { short: 0.26, mid: 0.48, long: 0.72 }[female ? K.skirtF : K.skirtM];
+        if (skLen) {
+          const g = pivot(upper, 0, 0.9, 0), topR = female ? 0.13 : 0.17, botR = topR + 0.06 + skLen * 0.32;
+          add(g, new G.CylinderGeometry(topR, botR, skLen, 28, 1, true), K.skirtColor || P.main, { pos: [0, -skLen / 2, 0], double: true });
+          add(g, tor(botR, 0.013), P.trim, { pos: [0, -skLen, 0], rot: [Math.PI / 2, 0, 0] });
+          rig.skirt = g;
+        }
+        if (K.cape) { const g = pivot(upper, 0, 1.46, -0.12); add(g, box(0.34, 0.75, 0.02), K.cape, { pos: [0, -0.37, 0] }); rig.cape = g; }
+        if (K.scarf) { add(upper, tor(0.075, 0.03), P.trim, { pos: [0, 1.5, 0], rot: [Math.PI / 2, 0, 0] }); const g = pivot(upper, 0.05, 1.48, -0.1); add(g, cap(0.03, 0.35), P.trim, { pos: [0, -0.22, 0] }); rig.cape = g; }
+        if (K.pads) [-1, 1].forEach(sd => add(upper, sph(0.085, 12, 8), P.main, { pos: [sd * sx, 1.47, 0], scale: [1.1, 0.8, 1.1] }));
+        if (K.fur) add(upper, tor(0.2, 0.055), P.trim, { pos: [0, 1.46, 0], rot: [Math.PI / 2, 0, 0], scale: [1, 0.75, 1] });
+        if (K.quiver) { add(torso, cyl(0.04, 0.035, 0.3, 8), '#6b4423', { pos: [0.06, 0.42, -0.13], rot: [0.25, 0, 0.3] }); [0, 1, 2].forEach(i => add(torso, cone(0.015, 0.05, 5), '#ffffff', { pos: [0.02 + i * 0.03, 0.6 + i * 0.01, -0.16], rot: [0.25, 0, 0.3] })); }
+
+        // оружие
+        const hr = rig.handR, hl = rig.handL;
+        switch (K.weapon) {
+          case 'sword_shield': {
+            const w = pivot(hr, 0, 0, 0); w.rotation.x = 0.7;
+            add(w, cyl(0.02, 0.02, 0.14, 8), '#6b4423'); add(w, box(0.17, 0.025, 0.035), '#e8c14a', { pos: [0, 0.08, 0] }); add(w, box(0.045, 0.55, 0.014), '#d8e2f0', { pos: [0, 0.37, 0] });
+            add(rig.armL, cyl(0.19, 0.19, 0.03, 20), P.accent, { pos: [-0.05, -0.3, 0.1], rot: [Math.PI / 2, 0, 0] });
+            add(rig.armL, sph(0.045, 10, 8), '#ffd166', { pos: [-0.05, -0.3, 0.125], scale: [1, 1, 0.5] });
+            break;
+          }
+          case 'axe2h': {
+            const w = pivot(hr, 0, 0, 0); w.rotation.x = 0.45;
+            add(w, cyl(0.022, 0.022, 1.05, 8), '#6b4423', { pos: [0, 0.3, 0] });
+            [-1, 1].forEach(sd => add(w, sph(0.15, 12, 8), '#c8c8d4', { pos: [sd * 0.11, 0.72, 0], scale: [1, 1, 0.14] }));
+            add(w, sph(0.04, 8, 6), '#3a3a44', { pos: [0, 0.72, 0] });
+            break;
+          }
+          case 'mace_shield': {
+            const w = pivot(hr, 0, 0, 0); w.rotation.x = 0.7;
+            add(w, cyl(0.02, 0.02, 0.5, 8), '#6b4423', { pos: [0, 0.2, 0] }); add(w, sph(0.09, 12, 10), '#e8c14a', { pos: [0, 0.5, 0] });
+            [0, 1, 2, 3].forEach(i => add(w, cone(0.02, 0.06, 6), '#fff3c0', { pos: [Math.cos(i * 1.57) * 0.09, 0.5, Math.sin(i * 1.57) * 0.09], rot: [Math.sin(i * 1.57) * 1.57, 0, -Math.cos(i * 1.57) * 1.57] }));
+            add(rig.armL, cyl(0.19, 0.19, 0.03, 20), '#f5f5ff', { pos: [-0.05, -0.3, 0.1], rot: [Math.PI / 2, 0, 0] });
+            add(rig.armL, box(0.04, 0.24, 0.01), '#e8c14a', { pos: [-0.05, -0.3, 0.12] }); add(rig.armL, box(0.16, 0.04, 0.01), '#e8c14a', { pos: [-0.05, -0.28, 0.12] });
+            break;
+          }
+          case 'staff': {
+            const w = pivot(hr, 0, 0, 0); w.rotation.x = 0.12;
+            add(w, cyl(0.022, 0.026, 1.55, 8), '#6b4a2b', { pos: [0, 0.45, 0] });
+            add(w, sph(0.07, 14, 10), P.accent, { pos: [0, 1.28, 0], basic: true }); add(w, tor(0.09, 0.012), P.trim, { pos: [0, 1.28, 0], rot: [Math.PI / 2.4, 0, 0] });
+            break;
+          }
+          case 'skullstaff': {
+            const w = pivot(hr, 0, 0, 0); w.rotation.x = 0.12;
+            add(w, cyl(0.022, 0.026, 1.55, 8), '#3a3048', { pos: [0, 0.45, 0] });
+            add(w, sph(0.07, 12, 10), '#e8e4d0', { pos: [0, 1.28, 0] }); add(w, sph(0.04, 8, 6), '#c8c4b0', { pos: [0, 1.22, 0.04], scale: [1, 0.7, 1] });
+            [-1, 1].forEach(sd => add(w, sph(0.014, 6, 6), P.accent, { pos: [sd * 0.03, 1.29, 0.06], basic: true }));
+            break;
+          }
+          case 'starstaff': {
+            const w = pivot(hr, 0, 0, 0); w.rotation.x = 0.12;
+            add(w, cyl(0.02, 0.026, 1.55, 8), '#f0e6c8', { pos: [0, 0.45, 0] });
+            add(w, new G.OctahedronGeometry(0.09), P.trim, { pos: [0, 1.3, 0], scale: [1, 1.3, 0.4] }); add(w, tor(0.12, 0.01), P.trim, { pos: [0, 1.3, 0] });
+            break;
+          }
+          case 'bow': {
+            const b = pivot(hl, 0, 0, -0.32);
+            const arc = mk(new G.TorusGeometry(0.34, 0.014, 6, 24, Math.PI), '#8a5a2b'); arc.rotation.set(0, Math.PI / 2, Math.PI / 2); b.add(arc);
+            add(b, cyl(0.004, 0.004, 0.68, 4), '#e6e6d0', { pos: [0, 0, 0], outline: false });
+            break;
+          }
+          case 'daggers':
+            [hr, hl].forEach(h => { const w = pivot(h, 0, 0, 0); w.rotation.x = 1.2; add(w, cyl(0.016, 0.016, 0.1, 8), '#3a2a1c'); add(w, cone(0.028, 0.3, 4), '#d8dde6', { pos: [0, 0.2, 0], scale: [1, 1, 0.3] }); });
+            break;
+          default: break;
+        }
+        rig.height = 1.85 * (opt.scale || 1);
+        return rig;
+      }
+
+      // ============ МОНСТРЫ ============
+      function buildSlime() {
+        const root = new G.Group(), body = new G.Group(); root.add(body);
+        add(body, sph(0.3, 20, 14), '#4df06a', { pos: [0, 0.22, 0], scale: [1, 0.75, 1] });
+        add(body, sph(0.1, 10, 8), '#b8ffc8', { pos: [-0.1, 0.4, 0.1], scale: [1, 0.6, 0.6], outline: false });
+        [-1, 1].forEach(sd => { add(body, sph(0.045, 8, 6), '#0b2010', { pos: [sd * 0.1, 0.26, 0.27], outline: false }); add(body, sph(0.014, 6, 6), '#ffffff', { pos: [sd * 0.09, 0.28, 0.305], outline: false }); });
+        return { root, upper: root, body, slime: true, bust: [], pec: [], hair: [], height: 0.6 };
+      }
+      function buildBat() {
+        const root = new G.Group(), body = pivot(root, 0, 0.9, 0);
+        add(body, sph(0.12, 12, 10), '#3b2a5a', { scale: [1, 1, 1.1] });
+        [-1, 1].forEach(sd => {
+          add(body, cone(0.035, 0.09, 6), '#3b2a5a', { pos: [sd * 0.07, 0.12, 0] });
+          add(body, sph(0.02, 6, 6), '#ff3b6b', { pos: [sd * 0.045, 0.02, 0.105], basic: true });
+          const w = pivot(body, sd * 0.1, 0.02, 0);
+          add(w, sph(0.22, 10, 6), '#5a3f8a', { pos: [sd * 0.2, 0, 0], scale: [1, 0.08, 0.6] });
+          if (sd < 0) body.wingL = w; else body.wingR = w;
+        });
+        return { root, upper: root, bat: body, bust: [], pec: [], hair: [], height: 1.2 };
+      }
+      function buildMob(kind) {
+        const base = { cls: 'berserk', gender: 'male', hairColor: null, hairLen: 'short' };
+        if (kind === 'slime') return buildSlime();
+        if (kind === 'bat') return buildBat();
+        if (kind === 'orc') return buildChar(base, { skin: '#5c8a3a', scale: 1.28, tusks: true, iris: '#ff3b3b' });
+        return buildChar({ cls: 'assassin', gender: 'male', hairColor: null, hairLen: 'short' }, {
+          skull: true, skin: '#e8e4d0', scale: 0.95,
+          pal: { main: '#d8d4c0', dark: '#cfcab6', trim: '#8a8a7a', accent: '#ff3030' },
+          kit: { head: 'none', scarf: false, weapon: 'none', legs: 'dark', boots: '#b8b39c', belt: '#8a8a7a', skirtM: 'none' }
+        });
+      }
+
+      // ============ АНИМАЦИЯ (покачивание на Math.sin / Math.cos) ============
+      function animate(rig, e, dt, t) {
+        const moving = !!e.mv;
+        if (rig.slime) { const k = Math.sin(t * 6 + e.id); rig.body.scale.set(1 + 0.07 * k, 1 - 0.09 * k, 1 + 0.07 * k); return; }
+        if (rig.bat) { const f = Math.sin(t * 18 + e.id) * 0.8; rig.bat.wingL.rotation.z = f; rig.bat.wingR.rotation.z = -f; rig.bat.position.y = 0.9 + Math.sin(t * 3 + e.id) * 0.06; return; }
+        rig.run += ((moving ? 1 : 0) - rig.run) * Math.min(1, dt * 9);
+        if (moving) rig.ph += dt * 10.5;
+        const R = rig.run, ph = rig.ph, br = Math.sin(t * 1.9 + rig.seed);
+        // дыхание в покое
+        rig.torso.scale.set(1 + 0.008 * br, 1 + 0.012 * br, 1 + 0.01 * br);
+        // шаг
+        const sw = Math.sin(ph) * 0.75 * R;
+        rig.legL.rotation.x = sw; rig.legR.rotation.x = -sw; rig.armL.rotation.x = -sw * 0.8; rig.armR.rotation.x = sw * 0.8;
+        rig.upper.position.y = Math.abs(Math.sin(ph)) * 0.035 * R;
+        rig.upper.rotation.x = e.ds ? 0.28 : 0; rig.upper.rotation.y = 0;
+        if (e.at > 0) { const u = 1 - e.at / 0.3; rig.armR.rotation.x = -Math.sin(u * Math.PI) * 2.2; rig.upper.rotation.y = -Math.sin(u * Math.PI) * 0.25; }
+        if (rig.female) {
+          // «дыхание» и асинхронное покачивание вверх-вниз при беге
+          rig.bust.forEach((b, i) => {
+            const p2 = ph * 2 + i * 1.2;
+            b.m.scale.set(1 + 0.02 * br, 1 + 0.025 * br + 0.11 * Math.cos(p2) * R, 0.9 + 0.02 * br);
+            b.m.position.y = b.by + 0.05 * Math.sin(p2) * R;
+            b.m.position.z = b.bz + 0.012 * Math.cos(p2) * R;
+          });
+        } else {
+          // мужчины: пульсация торса и груди при беге
+          rig.torso.scale.x *= 1 + 0.03 * Math.sin(ph * 2) * R;
+          rig.pec.forEach((p, i) => {
+            const s = 1 + 0.02 * br + 0.12 * Math.sin(ph * 2 + i * 0.6) * R;
+            p.m.scale.set(s, 0.72 * s, 0.55 * (1 + 0.5 * (s - 1)));
+          });
+        }
+        if (rig.skirt) { rig.skirt.rotation.z = Math.sin(ph) * 0.13 * R + 0.02 * Math.sin(t * 1.3 + rig.seed); rig.skirt.rotation.x = Math.cos(ph * 2) * 0.05 * R; }
+        rig.hair.forEach(h => {
+          const k = rig.female ? 1 : 0.6;
+          h.g.rotation.x = (Math.sin(ph + h.off) * 0.16 * R + 0.03 * Math.sin(t * 1.5 + h.off)) * k;
+          h.g.rotation.z = Math.cos(ph) * 0.05 * R * h.side * k;
+        });
+        if (rig.cape) rig.cape.rotation.x = 0.08 + 0.12 * R * (0.6 + 0.4 * Math.sin(ph * 2));
+      }
+
+      // ============ ДЕКОРАЦИИ ИЗ ПРОСТЫХ ФИГУР ============
+      function buildProp(model) {
+        const g = new G.Group(), a = (geo, hex, o) => add(g, geo, hex, o);
+        switch (model) {
+          case 'tree_a': a(cyl(0.09, 0.12, 0.7), '#5a3a1e', { pos: [0, 0.35, 0] }); [[0, 1.05, 0, 0.55, '#3cb35f'], [-0.32, 0.82, 0.1, 0.38, '#2f9e4f'], [0.34, 0.88, -0.1, 0.4, '#4ac96f']].forEach(c => a(sph(c[3], 18, 14), c[4], { pos: [c[0], c[1], c[2]] })); break;
+          case 'tree_b': a(cyl(0.08, 0.11, 0.8), '#5a3a1e', { pos: [0, 0.4, 0] }); a(sph(0.5, 18, 14), '#1f7a3a', { pos: [0, 1.15, 0] }); a(sph(0.34, 16, 12), '#26904a', { pos: [0.3, 0.85, 0.1] }); break;
+          case 'pine': a(cyl(0.07, 0.1, 0.5), '#4a2f1a', { pos: [0, 0.25, 0] }); [[0.6, 0.62, 0.62], [0.88, 0.5, 0.56], [1.13, 0.4, 0.5], [1.36, 0.3, 0.45]].forEach((c, i) => a(cone(c[1], c[2], 14), i % 2 ? '#15502e' : '#12452a', { pos: [0, c[0], 0] })); break;
+          case 'rock': a(new G.DodecahedronGeometry(0.3, 0), '#6b7280', { pos: [0, 0.14, 0], scale: [1, 0.65, 0.85] }); break;
+          case 'rock_dark': a(new G.DodecahedronGeometry(0.34, 0), '#3a3550', { pos: [0, 0.16, 0], scale: [1, 0.7, 0.85] }); break;
+          case 'bush': [[0, 0.16, 0, 0.22], [-0.18, 0.12, 0.05, 0.16], [0.17, 0.13, -0.03, 0.17]].forEach(c => a(sph(c[3], 12, 10), '#3cb35f', { pos: [c[0], c[1], c[2]] })); break;
+          case 'stump': a(cyl(0.12, 0.14, 0.16), '#6b4423', { pos: [0, 0.08, 0] }); a(cyl(0.1, 0.1, 0.02), '#8b5a2b', { pos: [0, 0.17, 0] }); break;
+          case 'house1': case 'house2': {
+            const h1 = model === 'house1', w = h1 ? 2.2 : 1.7, d = h1 ? 1.4 : 1.3, h = h1 ? 1.05 : 1.25, wall = h1 ? '#b39a78' : '#9aa3b8', roof = h1 ? '#a63d40' : '#3b5bb5';
+            a(box(w, h, d), wall, { pos: [0, h / 2, 0] });
+            const rf = a(cone(1, h1 ? 0.75 : 0.85, 4), roof, { pos: [0, h + (h1 ? 0.37 : 0.42), 0], rot: [0, Math.PI / 4, 0], scale: [w / 1.414 * 1.12, 1, d / 1.414 * 1.18] });
+            a(box(0.36, 0.62, 0.05), '#4a2f1a', { pos: [h1 ? 0 : 0.2, 0.31, d / 2 + 0.02] });
+            [-1, 1].forEach(sd => a(box(0.3, 0.26, 0.05), '#ffd166', { pos: [sd * w * 0.3, h * 0.6, d / 2 + 0.02], basic: true }));
+            a(box(0.22, 0.5, 0.22), '#6b6b78', { pos: [w * 0.3, h + 0.5, -d * 0.2] });
+            break;
+          }
+          case 'lamp': a(cyl(0.03, 0.04, 1.0), '#2a2a3a', { pos: [0, 0.5, 0] }); a(sph(0.1, 12, 10), '#00e5ff', { pos: [0, 1.06, 0], basic: true }); a(cone(0.14, 0.1, 10), '#2a2a3a', { pos: [0, 1.2, 0] }); a(cyl(0.08, 0.1, 0.06), '#3a3a4a', { pos: [0, 0.03, 0] }); break;
+          case 'board':
+            [-1, 1].forEach(sd => a(box(0.07, 0.95, 0.07), '#5a3a1e', { pos: [sd * 0.5, 0.47, 0] }));
+            a(box(1.1, 0.6, 0.05), '#7a5230', { pos: [0, 0.68, 0.03] }); a(box(1.25, 0.06, 0.25), '#3a2a1c', { pos: [0, 1.0, 0] });
+            [[-0.3, 0.72, '#f5f0dc'], [0, 0.66, '#ffe9a8'], [0.3, 0.7, '#f5f0dc']].forEach(c => a(box(0.22, 0.3, 0.01), c[2], { pos: [c[0], c[1], 0.07], outline: false }));
+            break;
+          case 'barrel': a(cyl(0.15, 0.15, 0.36), '#7a4b25', { pos: [0, 0.18, 0] }); [0.1, 0.27].forEach(y => a(tor(0.152, 0.012), '#3a3a4a', { pos: [0, y, 0], rot: [Math.PI / 2, 0, 0] })); break;
+          case 'crate': a(box(0.3, 0.3, 0.3), '#8a6238', { pos: [0, 0.15, 0] }); a(box(0.32, 0.03, 0.32), '#a37a48', { pos: [0, 0.3, 0] }); break;
+          case 'fountain': a(cyl(0.75, 0.8, 0.18, 24), '#7b8296', { pos: [0, 0.09, 0] }); a(cyl(0.64, 0.64, 0.06, 24), '#1fd5ff', { pos: [0, 0.18, 0], basic: true }); a(cyl(0.06, 0.09, 0.55, 12), '#9aa3b8', { pos: [0, 0.4, 0] }); a(cyl(0.22, 0.12, 0.08, 16), '#9aa3b8', { pos: [0, 0.68, 0] }); a(cyl(0.18, 0.18, 0.02, 16), '#7df0ff', { pos: [0, 0.73, 0], basic: true }); break;
+          case 'mushroom': a(cyl(0.03, 0.04, 0.12, 8), '#e8dcc0', { pos: [0, 0.06, 0] }); a(new G.SphereGeometry(0.1, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), '#ff2bd6', { pos: [0, 0.12, 0], basic: true }); break;
+          case 'crystal': [[0, 0, 0.16, 2.2, '#31d0ff'], [-0.2, 0.05, 0.1, 1.7, '#a855ff'], [0.2, 0.02, 0.11, 1.9, '#ff2bd6']].forEach(c => a(new G.OctahedronGeometry(c[2]), c[4], { pos: [c[0], c[2] * c[3] * 0.9, c[1]], scale: [1, c[3], 1], basic: true })); break;
+          case 'pillar': a(box(0.4, 0.12, 0.4), '#3a3550', { pos: [0, 0.06, 0] }); a(cyl(0.14, 0.16, 0.9, 12), '#4a4466', { pos: [0, 0.57, 0] }); a(box(0.4, 0.12, 0.4), '#3a3550', { pos: [0, 1.08, 0] }); a(box(0.05, 0.3, 0.02), '#00e5ff', { pos: [0, 0.6, 0.16], basic: true }); break;
+          case 'brazier': a(cyl(0.03, 0.05, 0.5), '#3a3a3a', { pos: [0, 0.25, 0] }); a(cyl(0.16, 0.09, 0.1, 12), '#4a4a4a', { pos: [0, 0.55, 0] }); g.userData.flame = a(cone(0.1, 0.28, 8), '#ff9f1c', { pos: [0, 0.74, 0], basic: true }); break;
+          case 'bones': a(cap(0.02, 0.3), '#e8e4d0', { pos: [0, 0.03, 0], rot: [0, 0, Math.PI / 2] }); a(cap(0.02, 0.24), '#d8d4c0', { pos: [0.05, 0.03, 0.12], rot: [0, 0.5, Math.PI / 2] }); a(sph(0.07, 10, 8), '#e8e4d0', { pos: [0.22, 0.07, -0.05] }); break;
+          default: break;
+        }
+        return g;
+      }
+
+      // ============ ЗОНА ============
+      const VOX = 0.075;
+      let builtZone = null, zoneGroup = null, boardObj = null, glowSources = [], flames = [];
+      const entGroup = new G.Group(); scene.add(entGroup);
+      const ents = new Map();
+      function buildZone() {
+        if (zoneGroup) { scene.remove(zoneGroup); zoneGroup.traverse(o => { if (o.material && o.material.map) o.material.map.dispose(); }); }
+        entGroup.clear(); ents.clear(); flames = [];
+        zoneGroup = new G.Group(); scene.add(zoneGroup);
+        const zone = World.ZONES[S.zone];
+        const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        World.drawGround(cv.getContext('2d'), S.zone);
+        const tex = new G.CanvasTexture(cv); tex.colorSpace = G.SRGBColorSpace; tex.anisotropy = 8;
+        const gm = new G.Mesh(new G.PlaneGeometry(W / T, H / T).rotateX(-Math.PI / 2), new G.MeshToonMaterial({ map: tex, gradientMap: steps }));
+        gm.position.set(W / 2 / T, 0, H / 2 / T); gm.receiveShadow = true; zoneGroup.add(gm);
+        boardObj = null; glowSources = [];
+        for (const p of World.propsFor(S.zone)) {
+          const o = buildProp(p.model);
+          o.position.set(p.x / T, 0, p.y / T); o.rotation.y = ((p.x * 7 + p.y * 13) % 628) / 100 * (p.model.indexOf('house') === 0 || p.id ? 0 : 1);
+          zoneGroup.add(o);
+          if (p.id === 'board') boardObj = o;
+          if (o.userData.flame) flames.push(o.userData.flame);
+          const gl = VM.MODELS[p.model].glow;
+          if (gl) glowSources.push({ pos: new G.Vector3(p.x / T + gl.x * VOX, gl.z * VOX, p.y / T + gl.y * VOX), color: new G.Color(gl.c), r: gl.r });
+        }
+        scene.background = new G.Color(zone.sky);
+        scene.fog = new G.Fog(zone.sky, 14, 34);
+        ambient.color.setHex(0xffffff).lerp(new G.Color(zone.ambient), 0.55);
+        ambient.intensity = 0.95 - zone.dark * 0.85;
+        sun.intensity = 1.15 - zone.dark * 0.9;
+        selfLight.intensity = zone.dark > 0.4 ? 4 : 1.5;
+        builtZone = S.zone;
+      }
+
+      // ============ СУЩНОСТИ ============
+      function syncEntities(dt) {
+        const seen = new Set();
+        for (const e of S.ents.values()) {
+          seen.add(e.key);
+          let ent = ents.get(e.key);
+          if (!ent) {
+            const rig = e.kind === 'p' ? buildChar({ cls: e.cls, gender: e.gender, hairColor: e.hc, hairLen: e.hl }) : buildMob(e.k);
+            ent = { rig, ang: Math.atan2(e.fx || 0, e.fy || 1) }; ents.set(e.key, ent); entGroup.add(rig.root);
+          }
+          const rig = ent.rig, o = rig.root;
+          o.position.set(e.x / T, 0, e.y / T);
+          let d = Math.atan2(e.fx || 0, e.fy || 1) - ent.ang; d = Math.atan2(Math.sin(d), Math.cos(d));
+          ent.ang += d * Math.min(1, dt * 14); o.rotation.y = ent.ang;
+          animate(rig, e, dt, S.time);
+          const s = (rig.scale || 1) * (e.kind === 'm' && e.dd ? 0.4 : 1);
+          o.scale.setScalar(s);
+          o.rotation.x = e.dd ? -1.3 : 0; o.position.y = e.dd ? 0.12 : 0;
+        }
+        for (const [k, ent] of ents) if (!seen.has(k)) { entGroup.remove(ent.rig.root); ents.delete(k); }
+      }
+
+      // ============ ПОДПИСИ, ПОЛОСКИ, УРОН, ЧАТ (HTML поверх сцены) ============
+      const fxLayer = $('fx'), overlays = new Map(); let used = new Set();
+      const tmp = new G.Vector3();
+      function overlay(key, init, x, y, z) {
+        let d = overlays.get(key);
+        if (!d) { d = document.createElement('div'); init(d); fxLayer.appendChild(d); overlays.set(key, d); }
+        tmp.set(x, y, z).project(camera);
+        d.style.display = tmp.z < 1 ? '' : 'none';
+        d.style.left = ((tmp.x * 0.5 + 0.5) * innerWidth) + 'px'; d.style.top = ((-tmp.y * 0.5 + 0.5) * innerHeight) + 'px';
+        used.add(key); return d;
+      }
+      function updateOverlays() {
+        for (const e of S.ents.values()) {
+          const ent = ents.get(e.key); if (!ent) continue;
+          const top = ent.rig.height * (ent.rig.scale || 1) + 0.1;
+          if (e.kind === 'p') {
+            const d = overlay('n' + e.key, el => { el.className = 'nm'; el.textContent = 'Ур.' + e.lv + ' ' + e.name; el.style.color = e.id === S.id ? '#7df0ff' : '#e9ecff'; }, e.x / T, top, e.y / T);
+            const label = 'Ур.' + e.lv + ' ' + e.name; if (d.textContent !== label) d.textContent = label;
+            if (e.bubble) { const b = overlay('b' + e.key, el => { el.className = 'bub'; }, e.x / T, top + 0.32, e.y / T); if (b.textContent !== e.bubble.text) b.textContent = e.bubble.text; }
+          }
+          if (!e.dd && e.hp < e.mh && !(e.kind === 'p' && e.id === S.id)) {
+            const d = overlay('h' + e.key, el => { el.className = 'bar'; el.innerHTML = '<i></i>'; }, e.x / T, top + (e.kind === 'p' ? -0.06 : 0.12), e.y / T);
+            d.firstChild.style.width = Math.max(0, e.hp / e.mh * 100) + '%';
+          }
+        }
+        for (const f of S.fx) {
+          if (f.t !== 'text') continue;
+          const d = overlay(f, el => { el.textContent = f.text; el.style.color = f.color; }, f.gx / T, (f.lift + f.rise) / T, f.gy / T);
+          d.style.opacity = String(Math.min(1, f.life / f.max * 2.2));
+        }
+        for (const [k, d] of overlays) if (!used.has(k)) { d.remove(); overlays.delete(k); }
+        used = new Set();
+      }
+
+      // ============ ЭФФЕКТЫ УМЕНИЙ ============
+      const fxMeshes = new Map();
+      function updateFxMeshes() {
+        const alive = new Set();
+        for (const f of S.fx) {
+          if (f.t !== 'arc' && f.t !== 'beam') continue;
+          alive.add(f);
+          let m = fxMeshes.get(f);
+          if (!m) {
+            const material = new G.MeshBasicMaterial({ color: f.color, transparent: true, depthWrite: false });
+            if (f.t === 'arc') {
+              m = new G.Mesh(new G.TorusGeometry(f.range / T * 0.6, 0.07, 6, 24, 2.0), material);
+              m.rotation.set(-Math.PI / 2, 0, -Math.atan2(f.fy, f.fx) - 1.0); m.position.set(f.x / T, 0.6, f.y / T);
+            } else {
+              const len = f.range / T, dir = new G.Vector3(f.fx, 0, f.fy).normalize();
+              m = new G.Mesh(new G.CylinderGeometry(0.05, 0.05, len, 6), material);
+              m.position.set(f.x / T + dir.x * len / 2, 0.7, f.y / T + dir.z * len / 2); m.quaternion.setFromUnitVectors(new G.Vector3(0, 1, 0), dir);
+            }
+            scene.add(m); fxMeshes.set(f, m);
+          }
+          m.material.opacity = f.life / f.max;
+        }
+        for (const [f, m] of fxMeshes) if (!alive.has(f)) { scene.remove(m); m.geometry.dispose(); m.material.dispose(); fxMeshes.delete(f); }
+      }
+
+      // ============ КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА ============
+      // Q/E или правая кнопка мыши - поворот, колесо - масштаб. При беге вперёд (W) камера сама
+      // плавно заходит за спину персонажа. Движение считается относительно камеры.
+      const camPos = new G.Vector3(), camLook = new G.Vector3();
+      let camInit = false, yawA = 0, dist = 9.5, lastOrbit = -9;
+      const PITCH = 0.75;
+      renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+      let orbiting = false;
+      renderer.domElement.addEventListener('mousedown', e => { if (e.button === 2) orbiting = true; });
+      window.addEventListener('mouseup', e => { if (e.button === 2) orbiting = false; });
+      window.addEventListener('mousemove', e => { if (orbiting) { yawA -= (e.movementX || 0) * 0.006; lastOrbit = S.time; } });
+      renderer.domElement.addEventListener('wheel', e => { dist = Math.max(5, Math.min(16, dist + Math.sign(e.deltaY) * 0.8)); }, { passive: true });
+
+      function updateCamera(dt) {
+        const e = me(), cx = e ? e.x / T : W / 2 / T, cz = e ? e.y / T : H / 2 / T;
+        if (held('KeyQ')) { yawA += dt * 1.8; lastOrbit = S.time; }
+        if (held('KeyE')) { yawA -= dt * 1.8; lastOrbit = S.time; }
+        if (e && held('KeyW', 'ArrowUp') && e.mv && S.time - lastOrbit > 1.2) {   // заходим за спину
+          const target = Math.atan2(-e.fx, -e.fy);
+          let d = target - yawA; d = Math.atan2(Math.sin(d), Math.cos(d));
+          yawA += d * Math.min(1, dt * 1.3);
+        }
+        const want = new G.Vector3(cx + Math.sin(yawA) * Math.cos(PITCH) * dist, Math.sin(PITCH) * dist, cz + Math.cos(yawA) * Math.cos(PITCH) * dist);
+        const look = new G.Vector3(cx, 0.8, cz);
+        if (!camInit) { camPos.copy(want); camLook.copy(look); camInit = true; }
+        const k = 1 - Math.exp(-dt * 7);
+        camPos.lerp(want, k); camLook.lerp(look, k);
+        camera.position.copy(camPos); camera.lookAt(camLook);
+        sun.position.set(cx + 6, 12, cz + 5); sun.target.position.set(cx, 0, cz);
+        selfLight.position.set(cx, 1.6, cz);
+        const pp = new G.Vector3(cx, 0, cz);
+        const near = glowSources.slice().sort((a, b) => a.pos.distanceToSquared(pp) - b.pos.distanceToSquared(pp));
+        pool.forEach((l, i) => {
+          const s = near[i];
+          if (s && s.pos.distanceToSquared(pp) < 130) { l.position.copy(s.pos); l.color.copy(s.color); l.intensity = 5; l.distance = s.r / T * 2.2; } else l.intensity = 0;
+        });
+      }
+
+      // ---------- клик по доске объявлений ----------
+      const ray = new G.Raycaster(), ndc = new G.Vector2();
+      function overBoard(ev) {
+        if (!boardObj) return false;
+        ndc.set(ev.clientX / innerWidth * 2 - 1, -(ev.clientY / innerHeight) * 2 + 1);
+        ray.setFromCamera(ndc, camera);
+        return ray.intersectObject(boardObj, true).length > 0;
+      }
+      renderer.domElement.addEventListener('mousemove', ev => { renderer.domElement.style.cursor = overBoard(ev) ? 'pointer' : 'default'; });
+      renderer.domElement.addEventListener('click', ev => { if (overBoard(ev)) clickBoard(); });
+
+      function frame(dt) {
+        if (S.zone) {
+          if (builtZone !== S.zone) buildZone();
+          syncEntities(dt);
+          flames.forEach((f, i) => { f.scale.set(1, 0.85 + 0.25 * Math.sin(S.time * 11 + i * 2), 1); });
+          updateFxMeshes();
+          updateCamera(dt);
+          updateOverlays();
+        }
+        renderer.render(scene, camera);
+      }
+      return { frame, onZone() { builtZone = null; }, yaw: () => yawA };
+    }
+
+    // ============================================================
+    //  ЗАПУСК
+    // ============================================================
+    (async function main() {
+      connect();
+      try { engine = mode === '3d' ? await Engine3D() : Engine2D(); }
+      catch (e) { console.error(e); return; }
+      let last = performance.now();
+      function loop(now) {
+        const dt = Math.min(0.05, (now - last) / 1000); last = now; S.time += dt;
+        pumpInput(now);
+        updateEntities(dt);
+        engine.frame(dt);
+        updateHud();
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

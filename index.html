@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Legendary Age — лаунчер</title>
+  <style>
+    :root {
+      --night: #070816; --panel: #0d0f26; --line: #2b2f66; --cyan: #2be7ff; --magenta: #ff3fd0; --gold: #ffcf5c;
+      --text: #e9ecff; --muted: #98a2d6; --danger: #ff5a6a; --ok: #58f0a0;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--night); color: var(--text); font: 15px/1.5 'Segoe UI', Tahoma, sans-serif; }
+    button, input { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+    [hidden] { display: none !important; }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(430px, 560px); height: 100%; }
+    .stage { position: relative; min-height: 0; background: #05061a; border-right: 1px solid var(--line); }
+    .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+    .stage .cap { position: absolute; left: 0; right: 0; bottom: 22px; text-align: center; font: 400 22px 'Palatino Linotype', Georgia, serif; text-shadow: 0 0 12px rgba(43,231,255,.6); }
+    .stage .cap small { display: block; margin-top: 2px; font: 14px 'Segoe UI', sans-serif; color: var(--muted); text-shadow: none; }
+
+    .panel { position: relative; z-index: 2; padding: 32px 40px 40px; overflow-y: auto; background: var(--panel); }
+    h1 { margin: 0; font: 400 42px/1.05 'Palatino Linotype', Georgia, serif; letter-spacing: .03em; text-shadow: 0 0 18px rgba(43,231,255,.55); }
+    .tagline { margin: 4px 0 14px; color: var(--muted); }
+    h2 { margin: 18px 0 8px; font: 400 21px/1.2 'Palatino Linotype', Georgia, serif; }
+    .status { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; color: var(--muted); font-size: 14px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 8px currentColor; color: var(--danger); }
+    .dot.on { background: var(--ok); color: var(--ok); }
+
+    .link { background: none; border: 0; padding: 0; color: var(--cyan); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+    .link:hover { color: #fff; }
+    .tabs { display: flex; gap: 22px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
+    .tab { background: none; border: 0; padding: 8px 0; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--magenta); }
+
+    label, .lbl { display: block; margin: 12px 0 4px; color: var(--muted); font-size: 14px; }
+    input[type=text], input[type=password] { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: #080a1e; }
+    input:focus { border-color: var(--cyan); outline: none; box-shadow: 0 0 0 3px rgba(43,231,255,.18); }
+    input[readonly] { opacity: .7; }
+
+    .btn { display: inline-block; margin-top: 14px; padding: 11px 22px; border-radius: 8px; border: 1px solid var(--cyan); background: transparent; color: var(--cyan); font-weight: 600; cursor: pointer; }
+    .btn:hover { background: rgba(43,231,255,.14); color: #fff; }
+    .btn.primary { background: var(--cyan); color: #04121a; }
+    .btn.primary:hover { background: #7df0ff; }
+    .btn.hot { border-color: var(--magenta); color: var(--magenta); }
+    .btn.hot:hover { background: rgba(255,63,208,.15); color: #fff; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .msg { min-height: 22px; margin: 10px 0 0; color: var(--danger); font-size: 14px; }
+    .msg.good { color: var(--ok); }
+
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .opt { padding: 9px 16px; border-radius: 10px; border: 1px solid var(--line); background: #0a0c22; cursor: pointer; }
+    .opt:hover:not(:disabled) { border-color: var(--cyan); }
+    .opt[aria-checked="true"] { border-color: var(--magenta); background: #170f2c; box-shadow: 0 0 12px rgba(255,63,208,.28); }
+    .opt:disabled { cursor: not-allowed; opacity: .55; }
+    .opt.gender { flex: 1; text-align: center; font-size: 16px; padding: 12px; }
+    .req { color: var(--gold); }
+
+    .classes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .cls { padding: 9px 6px; text-align: center; }
+    .cls b { display: block; font-size: 22px; line-height: 1.2; font-weight: 400; }
+    .cls span { font-size: 13px; }
+    .info { margin: 8px 0 0; color: var(--muted); font-size: 13px; min-height: 40px; }
+
+    .swatch { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; }
+    .swatch i { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(255,255,255,.35); }
+
+    .card { margin: 6px 0 4px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: #0a0c22; }
+    .card b { font: 400 22px 'Palatino Linotype', Georgia, serif; }
+    .card div { color: var(--muted); font-size: 14px; }
+    .play { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+    .play .btn { margin: 0; padding: 14px; font-size: 17px; }
+    .who { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; color: var(--muted); font-size: 14px; }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; grid-template-rows: 36% 1fr; }
+      .stage { border-right: 0; border-bottom: 1px solid var(--line); }
+      .panel { padding: 22px; }
+      h1 { font-size: 32px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="layout">
+    <section class="stage" aria-hidden="true">
+      <canvas id="preview" width="480" height="480"></canvas>
+      <div class="cap"><span id="cap-name">Legendary Age</span><small id="cap-sub"></small></div>
+    </section>
+
+    <section class="panel">
+      <h1>Legendary Age</h1>
+      <p class="tagline">Онлайн-RPG: три локации, девять классов, один общий мир.</p>
+      <div class="status"><span class="dot" id="dot"></span><span id="status-text">Нет соединения с сервером</span></div>
+
+      <!-- Вход и регистрация -->
+      <div id="screen-auth">
+        <label for="in-server">Адрес сервера</label>
+        <input type="text" id="in-server" value="ws://localhost:8080" spellcheck="false">
+        <div class="tabs" role="tablist" style="margin-top:16px">
+          <button class="tab" id="tab-login" role="tab" aria-selected="true" type="button">Вход</button>
+          <button class="tab" id="tab-register" role="tab" aria-selected="false" type="button">Регистрация</button>
+        </div>
+        <form id="auth-form" autocomplete="off" novalidate>
+          <label for="in-login">Логин</label>
+          <input type="text" id="in-login" maxlength="16" autocomplete="username">
+          <label for="in-pass">Пароль</label>
+          <input type="password" id="in-pass" autocomplete="current-password">
+          <div id="repeat-wrap" hidden>
+            <label for="in-pass2">Повторите пароль</label>
+            <input type="password" id="in-pass2" autocomplete="new-password">
+          </div>
+          <p class="msg" id="auth-msg" role="alert"></p>
+          <button class="btn primary" id="auth-submit" type="submit">Войти</button>
+        </form>
+      </div>
+
+      <!-- Персонаж -->
+      <div id="screen-char" hidden>
+        <div class="who"><span>Аккаунт: <b id="acc-name"></b></span><button class="link" id="btn-logout" type="button">Выйти</button></div>
+
+        <div id="ready-card" hidden>
+          <div class="card"><b id="rc-name"></b><div id="rc-sub"></div></div>
+          <h2>Запуск игры</h2>
+          <div class="play">
+            <button class="btn primary" id="play-2d" type="button">Играть в 2D</button>
+            <button class="btn hot" id="play-3d" type="button">Играть в 3D</button>
+          </div>
+          <p class="info">2D работает на любом ноутбуке. 3D требует видеокарту с поддержкой WebGL.</p>
+          <h2>Причёска</h2>
+        </div>
+
+        <form id="char-form" autocomplete="off" novalidate>
+          <div id="name-wrap">
+            <label for="in-name">Имя героя</label>
+            <input type="text" id="in-name" maxlength="16">
+          </div>
+
+          <div id="gender-wrap">
+            <span class="lbl" id="gender-lbl">Пол персонажа <span class="req">— обязательно, после создания изменить нельзя</span></span>
+            <div class="row" id="gender" role="radiogroup" aria-labelledby="gender-lbl"></div>
+          </div>
+
+          <div id="class-wrap">
+            <span class="lbl" id="cls-lbl">Класс</span>
+            <div class="classes" id="classes" role="radiogroup" aria-labelledby="cls-lbl"></div>
+            <p class="info" id="cls-info"></p>
+          </div>
+
+          <span class="lbl" id="hc-lbl">Цвет волос</span>
+          <div class="row" id="hair-color" role="radiogroup" aria-labelledby="hc-lbl"></div>
+          <span class="lbl" id="hl-lbl">Длина волос</span>
+          <div class="row" id="hair-len" role="radiogroup" aria-labelledby="hl-lbl"></div>
+
+          <p class="msg" id="char-msg" role="alert"></p>
+          <button class="btn primary" id="char-submit" type="submit">Создать персонажа</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script src="voxel-models.js"></script>
+  <script src="voxel-db.js"></script>
+  <script src="voxel2d.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    const DB = window.VoxelDB, VS = window.VoxelSprites;
+    const $ = id => document.getElementById(id);
+    const LS = {
+      get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+      set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } },
+      del: k => { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } }
+    };
+
+    const st = { ws: null, url: '', token: null, login: '', char: null, tab: 'login',
+      draft: { gender: null, cls: 'knight', hairColor: 'black', hairLen: 'short' } };
+
+    // ---------- сеть ----------
+    function normalizeUrl(v) {
+      v = String(v || '').trim();
+      if (!v) return 'ws://localhost:8080';
+      if (!/^wss?:\/\//i.test(v)) v = 'ws://' + v;
+      if (!/:\d+(\/|$)/.test(v.replace(/^wss?:\/\//i, ''))) v += ':8080';
+      return v;
+    }
+    function setStatus(on, text) { $('dot').classList.toggle('on', on); $('status-text').textContent = text; }
+
+    function connect(url) {
+      return new Promise((resolve, reject) => {
+        if (st.ws && st.url === url && st.ws.readyState === 1) return resolve();
+        if (st.ws) { try { st.ws.close(); } catch (e) { /* ignore */ } }
+        let ws;
+        try { ws = new WebSocket(url); } catch (e) { return reject(new Error('Неверный адрес сервера.')); }
+        const timer = setTimeout(() => { try { ws.close(); } catch (e) { /* ignore */ } reject(new Error('Сервер не отвечает.')); }, 5000);
+        st.ws = ws; st.url = url;
+        ws.onmessage = ev => {
+          let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+          if (m.t === 'hello') { clearTimeout(timer); setStatus(true, 'Подключено к серверу · игроков онлайн: ' + m.online); resolve(); return; }
+          if (st.waiter && st.waiter.t === m.t) { const w = st.waiter; st.waiter = null; w.res(m); }
+        };
+        ws.onerror = () => { clearTimeout(timer); reject(new Error('Не удалось подключиться. Запущен ли сервер? (npm run server)')); };
+        ws.onclose = () => { setStatus(false, 'Нет соединения с сервером'); };
+      });
+    }
+    function request(msg, replyType) {
+      return new Promise((res, rej) => {
+        if (!st.ws || st.ws.readyState !== 1) return rej(new Error('Нет соединения с сервером.'));
+        st.waiter = { t: replyType, res };
+        st.ws.send(JSON.stringify(msg));
+        setTimeout(() => { if (st.waiter && st.waiter.res === res) { st.waiter = null; rej(new Error('Сервер не ответил.')); } }, 8000);
+      });
+    }
+
+    // ---------- экраны ----------
+    function showAuth() {
+      $('screen-auth').hidden = false; $('screen-char').hidden = true;
+      setPreview(null);
+    }
+    function showChar() {
+      $('screen-auth').hidden = true; $('screen-char').hidden = false;
+      $('acc-name').textContent = st.login;
+      const ready = !!st.char;
+      $('ready-card').hidden = !ready;
+      $('name-wrap').hidden = ready; $('gender-wrap').hidden = ready; $('class-wrap').hidden = ready;
+      if (ready) {
+        LS.set('la_char', JSON.stringify(st.char));
+        Object.assign(st.draft, { gender: st.char.gender, cls: st.char.cls, hairColor: st.char.hairColor, hairLen: st.char.hairLen });
+        const c = DB.CLASSES[st.char.cls];
+        $('rc-name').textContent = st.char.name;
+        $('rc-sub').textContent = c.icon + ' ' + c.name[st.char.gender] + ' · ' + DB.GENDERS[st.char.gender].label.toLowerCase() + ' · ур. ' + st.char.lvl + ' · золото: ' + st.char.gold;
+        $('char-submit').textContent = 'Сохранить причёску';
+      } else {
+        $('char-submit').textContent = 'Создать персонажа';
+      }
+      $('char-msg').textContent = '';
+      renderControls();
+      updatePreview();
+    }
+
+    // ---------- вход / регистрация ----------
+    function setTab(tab) {
+      st.tab = tab;
+      $('tab-login').setAttribute('aria-selected', String(tab === 'login'));
+      $('tab-register').setAttribute('aria-selected', String(tab === 'register'));
+      $('repeat-wrap').hidden = tab !== 'register';
+      $('auth-submit').textContent = tab === 'login' ? 'Войти' : 'Создать аккаунт';
+      $('auth-msg').textContent = '';
+    }
+    $('tab-login').addEventListener('click', () => setTab('login'));
+    $('tab-register').addEventListener('click', () => setTab('register'));
+
+    function afterAuth(m) {
+      st.token = m.token; st.login = m.login; st.char = m.char || null;
+      LS.set('la_token', m.token); LS.set('la_login', m.login); LS.set('la_server', st.url);
+      if (st.char) LS.set('la_char', JSON.stringify(st.char)); else LS.del('la_char');
+      showChar();
+    }
+
+    $('auth-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const msg = $('auth-msg'); msg.textContent = '';
+      const pass = $('in-pass').value;
+      if (st.tab === 'register' && pass !== $('in-pass2').value) { msg.textContent = 'Пароли не совпадают.'; return; }
+      $('auth-submit').disabled = true;
+      try {
+        const url = normalizeUrl($('in-server').value);
+        $('in-server').value = url;
+        await connect(url);
+        const r = await request({ t: st.tab, login: $('in-login').value.trim(), pass }, 'auth');
+        if (!r.ok) { msg.textContent = r.error; return; }
+        $('in-pass').value = ''; $('in-pass2').value = '';
+        afterAuth(r);
+      } catch (err) { msg.textContent = err.message; } finally { $('auth-submit').disabled = false; }
+    });
+
+    $('btn-logout').addEventListener('click', () => {
+      LS.del('la_token'); LS.del('la_char'); st.token = null; st.char = null; showAuth();
+    });
+
+    // ---------- элементы выбора внешности ----------
+    function radio(cls, label, checked, disabled, onClick, extra) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'opt ' + (cls || ''); b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(checked)); b.disabled = !!disabled;
+      if (extra) extra(b); else b.textContent = label;
+      b.addEventListener('click', onClick);
+      return b;
+    }
+    function renderControls() {
+      const d = st.draft, locked = !!st.char;
+      const g = $('gender'); g.innerHTML = '';
+      Object.keys(DB.GENDERS).forEach(id => g.appendChild(radio('gender', DB.GENDERS[id].sym + ' ' + DB.GENDERS[id].label, d.gender === id, locked, () => { d.gender = id; renderControls(); updatePreview(); })));
+      const c = $('classes'); c.innerHTML = '';
+      DB.CLASS_IDS.forEach(id => {
+        const def = DB.CLASSES[id];
+        c.appendChild(radio('cls', '', d.cls === id, locked, () => { d.cls = id; renderControls(); updatePreview(); }, b => {
+          const i = document.createElement('b'); i.textContent = def.icon;
+          const s = document.createElement('span'); s.textContent = def.name[d.gender || 'male'];
+          b.append(i, s);
+        }));
+      });
+      const def = DB.CLASSES[d.cls];
+      $('cls-info').textContent = def.desc + '. Умения: 1 — ' + def.s1.name + ', 2 — ' + def.s2.name + '.';
+      const hc = $('hair-color'); hc.innerHTML = '';
+      Object.keys(DB.HAIR_COLORS).forEach(id => hc.appendChild(radio('swatch', '', d.hairColor === id, false, () => { d.hairColor = id; renderControls(); updatePreview(); }, b => {
+        const i = document.createElement('i'); i.style.background = DB.HAIR_COLORS[id].hex;
+        const s = document.createElement('span'); s.textContent = DB.HAIR_COLORS[id].label;
+        b.append(i, s);
+      })));
+      const hl = $('hair-len'); hl.innerHTML = '';
+      Object.keys(DB.HAIR_LENGTHS).forEach(id => hl.appendChild(radio('', DB.HAIR_LENGTHS[id].label, d.hairLen === id, false, () => { d.hairLen = id; renderControls(); updatePreview(); })));
+    }
+
+    $('char-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const msg = $('char-msg'); msg.className = 'msg'; msg.textContent = '';
+      const d = st.draft;
+      try {
+        if (st.char) {
+          const r = await request({ t: 'hair', token: st.token, hairColor: d.hairColor, hairLen: d.hairLen }, 'char');
+          if (!r.ok) { msg.textContent = r.error; return; }
+          st.char = r.char; LS.set('la_char', JSON.stringify(st.char));
+          msg.className = 'msg good'; msg.textContent = 'Причёска сохранена.';
+          showChar(); msg.className = 'msg good'; msg.textContent = 'Причёска сохранена.';
+          return;
+        }
+        if (!d.gender) { msg.textContent = 'Выберите пол персонажа — это обязательное поле.'; $('gender').firstChild.focus(); return; }
+        const name = DB.cleanName($('in-name').value);
+        if (!name) { msg.textContent = 'Имя: 2–16 символов, буквы, цифры, пробел, «_» или «-».'; $('in-name').focus(); return; }
+        const r = await request({ t: 'create', token: st.token, char: { name, gender: d.gender, cls: d.cls, hairColor: d.hairColor, hairLen: d.hairLen } }, 'char');
+        if (!r.ok) { msg.textContent = r.error; return; }
+        st.char = r.char; showChar();
+      } catch (err) { msg.textContent = err.message; }
+    });
+
+    function launch(mode) {
+      LS.set('la_mode', mode); LS.set('la_server', st.url); LS.set('la_token', st.token);
+      LS.set('la_char', JSON.stringify(st.char));
+      try { st.ws.close(); } catch (e) { /* ignore */ }
+      location.href = 'game.html?mode=' + mode;
+    }
+    $('play-2d').addEventListener('click', () => launch('2d'));
+    $('play-3d').addEventListener('click', () => launch('3d'));
+
+    // ---------- превью (воксельный персонаж вращается) ----------
+    const cv = $('preview'), ctx = cv.getContext('2d');
+    let tick = 0;
+    function currentLook() {
+      const d = st.draft;
+      return { cls: d.cls, gender: d.gender || 'male', hairColor: d.hairColor, hairLen: d.hairLen };
+    }
+    function updatePreview() {
+      const d = st.draft, def = DB.CLASSES[d.cls];
+      $('cap-name').textContent = st.char ? st.char.name : def.name[d.gender || 'male'];
+      $('cap-sub').textContent = d.gender ? def.desc : 'Выберите пол, чтобы увидеть персонажа';
+      drawPreview();
+    }
+    function setPreview() { $('cap-name').textContent = 'Legendary Age'; $('cap-sub').textContent = ''; drawPreview(true); }
+    function drawPreview(empty) {
+      const w = cv.width, h = cv.height;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = '#05061a'; ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = 'rgba(43,231,255,.10)'; ctx.lineWidth = 1;
+      for (let y = 260; y < h; y += 26) { ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(w, y + .5); ctx.stroke(); }
+      [['rgba(255,63,208,.9)', 210, 60, 3], ['rgba(43,231,255,.7)', 160, 42, 2]].forEach(r => {
+        ctx.save(); ctx.strokeStyle = r[0]; ctx.shadowColor = r[0]; ctx.shadowBlur = 16; ctx.lineWidth = r[3];
+        ctx.beginPath(); ctx.ellipse(w / 2, 372, r[1], r[2], 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      });
+      if (empty) return;
+      ctx.imageSmoothingEnabled = false;
+      const look = currentLook(), id = DB.ensureModel(look);
+      const dir = Math.floor(tick / 11) % 4, bob = (Math.floor(tick / 4) & 1) ? 0 : 1;
+      VS.draw(ctx, id, w / 2, 372 + bob, { s: 10, dir, alpha: st.draft.gender ? 1 : 0.3 });
+    }
+    setInterval(() => { tick++; if (!$('screen-auth').hidden) return; drawPreview(); }, 130);
+    drawPreview(true);
+
+    // ---------- старт: возобновляем сессию, если сервер её помнит ----------
+    (async function boot() {
+      $('in-server').value = LS.get('la_server') || 'ws://localhost:8080';
+      renderControls();
+      const token = LS.get('la_token');
+      if (!token) return;
+      try {
+        await connect(normalizeUrl($('in-server').value));
+        const r = await request({ t: 'me', token }, 'auth');
+        if (r.ok) afterAuth(r); else { LS.del('la_token'); }
+      } catch (e) { /* сервер недоступен - остаёмся на экране входа */ }
+    })();
+  })();
+  </script>
+</body>
+</html>
