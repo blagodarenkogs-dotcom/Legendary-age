@@ -1,0 +1,32 @@
+{
+  "name": "legendary-age",
+  "version": "0.2.0",
+  "description": "Legendary Age - online RPG: launcher, 2D/3D client and multiplayer server",
+  "main": "main.js",
+  "author": "Legendary Age",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "start:local": "electron . --server",
+    "server": "node server.js",
+    "build": "electron-builder --win portable"
+  },
+  "dependencies": {
+    "three": "0.160.0",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.legendaryage.game",
+    "productName": "Legendary Age",
+    "directories": { "output": "dist" },
+    "files": ["**/*", "!dist/**", "!data/**", "!*.md"],
+    "win": {
+      "target": "portable",
+      "signAndEditExecutable": false
+    }
+  }
+}
