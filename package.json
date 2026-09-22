@@ -22,8 +22,15 @@
   "build": {
     "appId": "com.legendaryage.game",
     "productName": "Legendary Age",
-    "directories": { "output": "dist" },
-    "files": ["**/*", "!dist/**", "!data/**", "!*.md"],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!data/**",
+      "!*.md"
+    ],
     "win": {
       "target": "portable",
       "signAndEditExecutable": false

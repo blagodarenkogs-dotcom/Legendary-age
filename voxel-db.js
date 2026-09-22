@@ -55,9 +55,9 @@
       s1: { name: 'Костяной шип', cd: 0.8, range: 170, dot: 0.8, dmg: 19, kb: 12, fx: 'beam', color: '#7dff9a' }, s2: { name: 'Теневой шаг', cd: 3, dist: 150 }
     },
     priest: {
-      icon: '✨', name: { male: 'Жрец', female: 'Жрица' }, desc: 'Прекрасная целительница в откровенном жреческом наряде', hp: 100, speed: 160,
+      icon: '✨', name: { male: 'Жрец', female: 'Жрица' }, desc: 'Прекрасный целитель в лёгких одеждах', hp: 100, speed: 160,
       pal: { main: '#f4f1ea', trim: '#f2c14e', dark: '#c9c3b4', accent: '#9fe8ff' },
-      kit: { weapon: 'starstaff', head: 'veil', skirtM: 'long', skirtF: 'short', legs: 'dark', boots: '#e0d9c6', openChest: true },
+      kit: { weapon: 'starstaff', head: 'veil', skirtM: 'long', skirtF: 'long', legs: 'dark', boots: '#e0d9c6' },
       s1: { name: 'Святой свет', cd: 0.85, range: 140, dot: 0.5, dmg: 14, kb: 10, fx: 'beam', color: '#fff3b0' }, s2: { name: 'Шаг света', cd: 3, dist: 140 }
     },
     archer: {
@@ -111,24 +111,11 @@
     const legL = { anim: 'legL', pivot: [-1.5, 0.5, 6], boxes: [B(-3, -1, 2, 3, 3, 4, legC), B(-3, -1, 0, 3, 4, 2, boots)] };
     const legR = { anim: 'legR', pivot: [1.5, 0.5, 6], boxes: [B(0, -1, 2, 3, 3, 4, legC), B(0, -1, 0, 3, 4, 2, boots)] };
 
-    // --- торс: женская фигура (узкая талия + выраженная грудь) или мужская
+    // --- торс: женская фигура (узкая талия) или мужская (широкие плечи, рельеф груди)
     const t = [];
     if (female) {
-      // талия + бёдра
-      t.push(B(-2, -2, 6, 4, 4, 1, k.belt || p.trim));
-      t.push(B(-2, -2, 7, 4, 4, 2, top));
-      // грудь (увеличенная)
-      t.push(B(-4, -2, 9, 8, 4, 3, top));
-      t.push(B(-4, 2, 9, 3, 1, 3, mix(top, '#ffffff', 0.12))); // левая
-      t.push(B(1, 2, 9, 3, 1, 3, mix(top, '#ffffff', 0.12)));  // правая
-      // дополнительный объём груди вперёд
-      t.push(B(-3, 3, 9, 2, 1, 2, mix(top, '#ffffff', 0.18)));
-      t.push(B(1, 3, 9, 2, 1, 2, mix(top, '#ffffff', 0.18)));
-      // открытое декольте для жрицы и похожих нарядов
-      if (k.openChest) {
-        t.push(B(-2, 2, 10, 4, 1, 2, mix(SKIN, '#ffb0b0', 0.15))); // кожа в вырезе
-        t.push(B(-1, 3, 11, 2, 1, 1, mix(SKIN, '#ffb0b0', 0.1)));
-      }
+      t.push(B(-2, -2, 6, 4, 4, 1, k.belt || p.trim), B(-2, -2, 7, 4, 4, 2, top), B(-3, -2, 9, 6, 4, 3, top),
+        B(-3, 2, 9, 2, 1, 2, mix(top, '#ffffff', 0.1)), B(1, 2, 9, 2, 1, 2, mix(top, '#ffffff', 0.1)));
     } else {
       t.push(B(-3, -2, 6, 6, 4, 1, k.belt || p.trim), B(-3, -2, 7, 6, 4, 2, top), B(-4, -2, 9, 8, 4, 3, top),
         B(-3, 2, 10, 3, 1, 2, mix(top, torsoBare ? '#ffffff' : '#000000', 0.12)), B(0, 2, 10, 3, 1, 2, mix(top, torsoBare ? '#ffffff' : '#000000', 0.12)));

@@ -8,6 +8,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
+const http = require('http');
 const { WebSocketServer } = require('ws');
 const World = require('./world.js');
 const DB = require('./voxel-db.js');
@@ -247,16 +248,77 @@ function start(opts) {
     }
   }
 
-  // ---------- сеть ----------
-  const wss = new WebSocketServer({ port: PORT, host: HOST, maxPayload: 4096, perMessageDeflate: false });
-  wss.on('listening', () => {
-    log('запущен на порту ' + PORT);
-    const ips = [];
-    Object.values(os.networkInterfaces()).forEach(l => (l || []).forEach(i => { if (i.family === 'IPv4' && !i.internal) ips.push(i.address); }));
-    log('адрес для игры на этом компьютере: ws://localhost:' + PORT);
-    ips.forEach(ip => log('адрес для друзей в локальной сети: ws://' + ip + ':' + PORT));
+  // ---------- сеть: HTTP + WebSocket ----------
+  // Railway/Render и другие облачные платформы ожидают обычный HTTP-сервис
+  // на переменной PORT. WebSocket работает поверх этого же HTTP-сервера
+  // через upgrade на пути /ws.
+  const httpServer = http.createServer((req, res) => {
+    const url = new URL(req.url || '/', 'http://localhost');
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      res.writeHead(405, { 'Allow': 'GET, HEAD' });
+      return res.end(JSON.stringify({ ok: false, error: 'Method Not Allowed' }));
+    }
+
+    if (url.pathname === '/api/health') {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, online: online.size, uptime: Math.floor(process.uptime()) }));
+    }
+
+    if (url.pathname === '/api/status') {
+      res.writeHead(200);
+      return res.end(JSON.stringify({
+        ok: true,
+        name: 'Legendary Age Server',
+        version: 1,
+        online: online.size,
+        websocket: '/ws'
+      }));
+    }
+
+    if (url.pathname === '/' || url.pathname === '') {
+      res.writeHead(200);
+      return res.end(JSON.stringify({
+        ok: true,
+        name: 'Legendary Age Server',
+        websocket: '/ws',
+        health: '/api/health'
+      }));
+    }
+
+    res.writeHead(404);
+    return res.end(JSON.stringify({ ok: false, error: 'Not Found' }));
   });
-  wss.on('error', e => { console.error('[server] ошибка:', e.message); if (opts.onError) opts.onError(e); });
+
+  const wss = new WebSocketServer({
+    server: httpServer,
+    path: '/ws',
+    maxPayload: 4096,
+    perMessageDeflate: false
+  });
+
+  httpServer.on('listening', () => {
+    log('HTTP + WebSocket сервер запущен на порту ' + PORT);
+    log('HTTP: http://localhost:' + PORT);
+    log('WebSocket: ws://localhost:' + PORT + '/ws');
+    const ips = [];
+    Object.values(os.networkInterfaces()).forEach(l => (l || []).forEach(i => {
+      if (i.family === 'IPv4' && !i.internal) ips.push(i.address);
+    }));
+    ips.forEach(ip => log('WebSocket LAN: ws://' + ip + ':' + PORT + '/ws'));
+  });
+  httpServer.on('error', e => {
+    console.error('[server] HTTP ошибка:', e.message);
+    if (opts.onError) opts.onError(e);
+  });
+  wss.on('error', e => {
+    console.error('[server] WebSocket ошибка:', e.message);
+    if (opts.onError) opts.onError(e);
+  });
+
+  httpServer.listen(PORT, HOST);
 
   const pinger = setInterval(() => {
     wss.clients.forEach(ws => { if (ws.isAlive === false) return ws.terminate(); ws.isAlive = false; ws.ping(); });
@@ -368,9 +430,10 @@ function start(opts) {
     clearInterval(loop); clearInterval(pinger);
     wss.clients.forEach(ws => ws.close());
     wss.close();
+    httpServer.close();
     flush();
   }
-  return { wss, stop, db: () => db, port: PORT };
+  return { wss, httpServer, stop, db: () => db, port: PORT };
 }
 
 module.exports = { start };

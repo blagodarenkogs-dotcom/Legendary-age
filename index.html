@@ -74,6 +74,20 @@
     .play .btn { margin: 0; padding: 14px; font-size: 17px; }
     .who { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; color: var(--muted); font-size: 14px; }
 
+    .mode-select { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0; }
+    .mode-btn { padding: 16px; border-radius: 10px; border: 2px solid var(--line); background: #0a0c22; cursor: pointer; text-align: center; transition: all .2s; }
+    .mode-btn:hover { border-color: var(--cyan); }
+    .mode-btn.active { border-color: var(--magenta); background: #170f2c; box-shadow: 0 0 16px rgba(255,63,208,.3); }
+    .mode-btn b { display: block; font-size: 18px; margin-bottom: 4px; }
+    .mode-btn span { display: block; font-size: 13px; color: var(--muted); }
+
+    .castle-bg { 
+      position: absolute; inset: 0; z-index: -1; opacity: 0.08;
+      background: linear-gradient(135deg, #1a0f2e 0%, #2d1b4e 50%, #1a0f2e 100%);
+      background-attachment: fixed;
+    }
+    .castle-svg { position: absolute; inset: 0; z-index: -1; opacity: 0.04; }
+
     @media (max-width: 900px) {
       .layout { grid-template-columns: 1fr; grid-template-rows: 36% 1fr; }
       .stage { border-right: 0; border-bottom: 1px solid var(--line); }
@@ -90,14 +104,37 @@
     </section>
 
     <section class="panel">
-      <h1>Legendary Age</h1>
-      <p class="tagline">Онлайн-RPG: три локации, девять классов, один общий мир.</p>
-      <div class="status"><span class="dot" id="dot"></span><span id="status-text">Нет соединения с сервером</span></div>
+      <div class="castle-bg"></div>
+      <svg class="castle-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20,150 L20,50 L40,50 L40,30 L50,30 L50,50 L60,50 L60,20 L75,20 L75,50 L100,50 L100,20 L115,20 L115,50 L130,50 L130,20 L145,20 L145,50 L160,50 L160,30 L180,30 L180,50 L200,50 L200,150 Z" fill="none" stroke="rgba(255,207,92,.3)" stroke-width="1"/>
+        <circle cx="45" cy="60" r="5" fill="rgba(255,207,92,.2)"/>
+        <circle cx="155" cy="60" r="5" fill="rgba(255,207,92,.2)"/>
+      </svg>
 
-      <!-- Вход и регистрация -->
+      <h1>Legendary Age</h1>
+      <p class="tagline">Средневековый мир приключений: сражайся одиночка или с друзьями.</p>
+      <div class="status"><span class="dot" id="dot"></span><span id="status-text">Проверка соединения…</span></div>
+
+      <!-- Выбор режима: онлайн или оффлайн -->
+      <div id="screen-mode" hidden>
+        <h2>Выбери режим игры</h2>
+        <div class="mode-select">
+          <button class="mode-btn" id="mode-online" type="button">
+            <b>🌐 Онлайн</b>
+            <span>Играй с друзьями по сети</span>
+          </button>
+          <button class="mode-btn" id="mode-offline" type="button">
+            <b>⚔️ Оффлайн</b>
+            <span>Однопользовательская игра</span>
+          </button>
+        </div>
+        <button class="btn primary" id="mode-submit" type="button" disabled>Продолжить</button>
+      </div>
+
+      <!-- Вход и регистрация (только для онлайна) -->
       <div id="screen-auth">
-        <label for="in-server">Адрес сервера</label>
-        <input type="text" id="in-server" value="ws://localhost:8080" spellcheck="false">
+        <label for="in-server">Адрес сервера (оставь как есть или вставь свой)</label>
+        <input type="text" id="in-server" value="ws://localhost:8080" placeholder="ws://localhost:8080 или wss://твой-домен.com" spellcheck="false">
         <div class="tabs" role="tablist" style="margin-top:16px">
           <button class="tab" id="tab-login" role="tab" aria-selected="true" type="button">Вход</button>
           <button class="tab" id="tab-register" role="tab" aria-selected="false" type="button">Регистрация</button>
@@ -113,12 +150,13 @@
           </div>
           <p class="msg" id="auth-msg" role="alert"></p>
           <button class="btn primary" id="auth-submit" type="submit">Войти</button>
+          <button class="link" id="back-mode" type="button" style="display:block; margin-top:12px">← Назад к выбору режима</button>
         </form>
       </div>
 
-      <!-- Персонаж -->
+      <!-- Персонаж (онлайн и оффлайн) -->
       <div id="screen-char" hidden>
-        <div class="who"><span>Аккаунт: <b id="acc-name"></b></span><button class="link" id="btn-logout" type="button">Выйти</button></div>
+        <div class="who"><span>Герой: <b id="acc-name"></b></span><button class="link" id="btn-logout" type="button">Выйти</button></div>
 
         <div id="ready-card" hidden>
           <div class="card"><b id="rc-name"></b><div id="rc-sub"></div></div>
@@ -169,15 +207,36 @@
     const DB = window.VoxelDB, VS = window.VoxelSprites;
     const $ = id => document.getElementById(id);
     const LS = {
-      get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
-      set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } },
-      del: k => { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } }
+      get: (k, sandbox) => { try { return localStorage.getItem((sandbox || 'online') + ':' + k); } catch (e) { return null; } },
+      set: (k, v, sandbox) => { try { localStorage.setItem((sandbox || 'online') + ':' + k, v); } catch (e) { /* ignore */ } },
+      del: (k, sandbox) => { try { localStorage.removeItem((sandbox || 'online') + ':' + k); } catch (e) { /* ignore */ } }
     };
 
-    const st = { ws: null, url: '', token: null, login: '', char: null, tab: 'login',
+    const st = { mode: 'online', ws: null, url: '', token: null, login: '', char: null, tab: 'login',
       draft: { gender: null, cls: 'knight', hairColor: 'black', hairLen: 'short' } };
 
-    // ---------- сеть ----------
+    // ---------- режим игры ----------
+    function checkServer() {
+      return new Promise(res => {
+        const ws = new WebSocket('ws://localhost:8080');
+        const t = setTimeout(() => { try { ws.close(); } catch (e) {} res(false); }, 2000);
+        ws.onopen = () => { clearTimeout(t); try { ws.close(); } catch (e) {} res(true); };
+        ws.onerror = () => { clearTimeout(t); res(false); };
+      });
+    }
+    async function showModeSelect() {
+      $('screen-auth').hidden = true; $('screen-char').hidden = true; $('screen-mode').hidden = false;
+      const ok = await checkServer();
+      const dot = $('dot'), txt = $('status-text');
+      if (ok) { dot.classList.add('on'); txt.textContent = 'Сервер доступен'; } 
+      else { dot.classList.remove('on'); txt.textContent = 'Сервер не найден (доступен только оффлайн режим)'; }
+      $('mode-online').disabled = !ok; if (!ok) $('mode-online').style.opacity = '0.5';
+    }
+    $('mode-online').addEventListener('click', () => { st.mode = 'online'; $('mode-online').classList.add('active'); $('mode-offline').classList.remove('active'); $('mode-submit').disabled = false; });
+    $('mode-offline').addEventListener('click', () => { st.mode = 'offline'; $('mode-offline').classList.add('active'); $('mode-online').classList.remove('active'); $('mode-submit').disabled = false; });
+    $('mode-submit').addEventListener('click', () => { st.mode === 'online' ? showAuth() : showChar(); });
+
+    // ---------- сеть (для онлайна) ----------
     function normalizeUrl(v) {
       v = String(v || '').trim();
       if (!v) return 'ws://localhost:8080';
@@ -197,11 +256,10 @@
         st.ws = ws; st.url = url;
         ws.onmessage = ev => {
           let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
-          if (m.t === 'hello') { clearTimeout(timer); setStatus(true, 'Подключено к серверу · игроков онлайн: ' + m.online); resolve(); return; }
+          if (m.t === 'hello') { clearTimeout(timer); setStatus(true, 'Подключено к серверу'); resolve(); return; }
           if (st.waiter && st.waiter.t === m.t) { const w = st.waiter; st.waiter = null; w.res(m); }
         };
-        ws.onerror = () => { clearTimeout(timer); reject(new Error('Не удалось подключиться. Запущен ли сервер? (npm run server)')); };
-        ws.onclose = () => { setStatus(false, 'Нет соединения с сервером'); };
+        ws.onerror = () => { clearTimeout(timer); reject(new Error('Не удалось подключиться. Запущен ли сервер?')); };
       });
     }
     function request(msg, replyType) {
@@ -215,17 +273,17 @@
 
     // ---------- экраны ----------
     function showAuth() {
-      $('screen-auth').hidden = false; $('screen-char').hidden = true;
+      $('screen-auth').hidden = false; $('screen-char').hidden = true; $('screen-mode').hidden = true;
       setPreview(null);
     }
     function showChar() {
-      $('screen-auth').hidden = true; $('screen-char').hidden = false;
-      $('acc-name').textContent = st.login;
+      $('screen-auth').hidden = true; $('screen-char').hidden = false; $('screen-mode').hidden = true;
+      $('acc-name').textContent = st.login || (st.mode === 'offline' ? 'Местный герой' : '?');
       const ready = !!st.char;
       $('ready-card').hidden = !ready;
       $('name-wrap').hidden = ready; $('gender-wrap').hidden = ready; $('class-wrap').hidden = ready;
       if (ready) {
-        LS.set('la_char', JSON.stringify(st.char));
+        LS.set('char', JSON.stringify(st.char), st.mode);
         Object.assign(st.draft, { gender: st.char.gender, cls: st.char.cls, hairColor: st.char.hairColor, hairLen: st.char.hairLen });
         const c = DB.CLASSES[st.char.cls];
         $('rc-name').textContent = st.char.name;
@@ -250,11 +308,12 @@
     }
     $('tab-login').addEventListener('click', () => setTab('login'));
     $('tab-register').addEventListener('click', () => setTab('register'));
+    $('back-mode').addEventListener('click', showModeSelect);
 
     function afterAuth(m) {
       st.token = m.token; st.login = m.login; st.char = m.char || null;
-      LS.set('la_token', m.token); LS.set('la_login', m.login); LS.set('la_server', st.url);
-      if (st.char) LS.set('la_char', JSON.stringify(st.char)); else LS.del('la_char');
+      LS.set('token', m.token, 'online'); LS.set('login', m.login, 'online'); LS.set('server', st.url, 'online');
+      if (st.char) LS.set('char', JSON.stringify(st.char), 'online'); else LS.del('char', 'online');
       showChar();
     }
 
@@ -276,7 +335,7 @@
     });
 
     $('btn-logout').addEventListener('click', () => {
-      LS.del('la_token'); LS.del('la_char'); st.token = null; st.char = null; showAuth();
+      LS.del('token', st.mode); LS.del('char', st.mode); st.token = null; st.char = null; showModeSelect();
     });
 
     // ---------- элементы выбора внешности ----------
@@ -318,33 +377,50 @@
       const msg = $('char-msg'); msg.className = 'msg'; msg.textContent = '';
       const d = st.draft;
       try {
-        if (st.char) {
-          const r = await request({ t: 'hair', token: st.token, hairColor: d.hairColor, hairLen: d.hairLen }, 'char');
+        if (st.mode === 'offline') {
+          // Локальное сохранение
+          if (st.char) {
+            st.char.hairColor = d.hairColor; st.char.hairLen = d.hairLen;
+            LS.set('char', JSON.stringify(st.char), 'offline');
+            msg.className = 'msg good'; msg.textContent = 'Причёска сохранена.';
+            showChar(); msg.className = 'msg good'; msg.textContent = 'Причёска сохранена.';
+            return;
+          }
+          if (!d.gender) { msg.textContent = 'Выберите пол персонажа — это обязательное поле.'; $('gender').firstChild.focus(); return; }
+          const name = DB.cleanName($('in-name').value);
+          if (!name) { msg.textContent = 'Имя: 2–16 символов, буквы, цифры, пробел, «_» или «-».'; $('in-name').focus(); return; }
+          st.char = { name, gender: d.gender, cls: d.cls, hairColor: d.hairColor, hairLen: d.hairLen, lvl: 1, xp: 0, gold: 0, zone: 'town' };
+          showChar();
+        } else {
+          // Онлайн режим (через сервер)
+          if (st.char) {
+            const r = await request({ t: 'hair', token: st.token, hairColor: d.hairColor, hairLen: d.hairLen }, 'char');
+            if (!r.ok) { msg.textContent = r.error; return; }
+            st.char = r.char; LS.set('char', JSON.stringify(st.char), 'online');
+            msg.className = 'msg good'; msg.textContent = 'Причёска сохранена.';
+            showChar(); msg.className = 'msg good'; msg.textContent = 'Причёска сохранена.';
+            return;
+          }
+          if (!d.gender) { msg.textContent = 'Выберите пол персонажа — это обязательное поле.'; $('gender').firstChild.focus(); return; }
+          const name = DB.cleanName($('in-name').value);
+          if (!name) { msg.textContent = 'Имя: 2–16 символов, буквы, цифры, пробел, «_» или «-».'; $('in-name').focus(); return; }
+          const r = await request({ t: 'create', token: st.token, char: { name, gender: d.gender, cls: d.cls, hairColor: d.hairColor, hairLen: d.hairLen } }, 'char');
           if (!r.ok) { msg.textContent = r.error; return; }
-          st.char = r.char; LS.set('la_char', JSON.stringify(st.char));
-          msg.className = 'msg good'; msg.textContent = 'Причёска сохранена.';
-          showChar(); msg.className = 'msg good'; msg.textContent = 'Причёска сохранена.';
-          return;
+          st.char = r.char; showChar();
         }
-        if (!d.gender) { msg.textContent = 'Выберите пол персонажа — это обязательное поле.'; $('gender').firstChild.focus(); return; }
-        const name = DB.cleanName($('in-name').value);
-        if (!name) { msg.textContent = 'Имя: 2–16 символов, буквы, цифры, пробел, «_» или «-».'; $('in-name').focus(); return; }
-        const r = await request({ t: 'create', token: st.token, char: { name, gender: d.gender, cls: d.cls, hairColor: d.hairColor, hairLen: d.hairLen } }, 'char');
-        if (!r.ok) { msg.textContent = r.error; return; }
-        st.char = r.char; showChar();
       } catch (err) { msg.textContent = err.message; }
     });
 
     function launch(mode) {
-      LS.set('la_mode', mode); LS.set('la_server', st.url); LS.set('la_token', st.token);
-      LS.set('la_char', JSON.stringify(st.char));
-      try { st.ws.close(); } catch (e) { /* ignore */ }
-      location.href = 'game.html?mode=' + mode;
+      LS.set('mode', mode, st.mode); LS.set('server', st.url, st.mode); LS.set('token', st.token, st.mode);
+      LS.set('char', JSON.stringify(st.char), st.mode);
+      try { if (st.ws) st.ws.close(); } catch (e) { /* ignore */ }
+      location.href = 'game.html?sandbox=' + st.mode + '&mode=' + mode;
     }
     $('play-2d').addEventListener('click', () => launch('2d'));
     $('play-3d').addEventListener('click', () => launch('3d'));
 
-    // ---------- превью (воксельный персонаж вращается) ----------
+    // ---------- превью ----------
     const cv = $('preview'), ctx = cv.getContext('2d');
     let tick = 0;
     function currentLook() {
@@ -374,20 +450,31 @@
       const dir = Math.floor(tick / 11) % 4, bob = (Math.floor(tick / 4) & 1) ? 0 : 1;
       VS.draw(ctx, id, w / 2, 372 + bob, { s: 10, dir, alpha: st.draft.gender ? 1 : 0.3 });
     }
-    setInterval(() => { tick++; if (!$('screen-auth').hidden) return; drawPreview(); }, 130);
-    drawPreview(true);
+    setInterval(() => { tick++; if (!$('screen-mode').hidden) return; drawPreview(); }, 130);
+    setPreview();
 
-    // ---------- старт: возобновляем сессию, если сервер её помнит ----------
+    // ---------- старт ----------
     (async function boot() {
-      $('in-server').value = LS.get('la_server') || 'ws://localhost:8080';
-      renderControls();
-      const token = LS.get('la_token');
-      if (!token) return;
-      try {
-        await connect(normalizeUrl($('in-server').value));
-        const r = await request({ t: 'me', token }, 'auth');
-        if (r.ok) afterAuth(r); else { LS.del('la_token'); }
-      } catch (e) { /* сервер недоступен - остаёмся на экране входа */ }
+      const savedMode = LS.get('mode', 'online') || LS.get('mode', 'offline');
+      if (savedMode) {
+        st.mode = savedMode;
+        const token = LS.get('token', st.mode);
+        if (token && st.mode === 'online') {
+          try {
+            const url = LS.get('server', 'online') || 'ws://localhost:8080';
+            $('in-server').value = url;
+            await connect(url);
+            st.url = url;
+            const r = await request({ t: 'me', token }, 'auth');
+            if (r.ok) { afterAuth(r); return; } else { LS.del('token', 'online'); }
+          } catch (e) { /* сервер недоступен */ }
+        } else if (st.mode === 'offline') {
+          st.char = null;
+          try { st.char = JSON.parse(LS.get('char', 'offline')); } catch (e) { }
+          if (st.char) { showChar(); return; }
+        }
+      }
+      renderControls(); showModeSelect();
     })();
   })();
   </script>
